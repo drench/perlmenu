@@ -12,20 +12,24 @@
 #          Ames, IA  50011
 #          Email: skunz@iastate.edu
 #
-# Date:    February 1996
+# Date:    February 1997
 #****************************************************************************
 
-# Comment these lines for use with Perl4/Curseperl
+# Perl5+Curses ONLY!
+# Comment these lines for use with Perl4/curseperl
 BEGIN { $Curses::OldCurses = 1; }
-use Curses;
+use Curses;                     # PerlMenu needs "Curses"
+use perlmenu;                   # Main menu package (Perl5 only)
+require "./menuutil.pl";        # For "pause" and "print_nl" routines.
 
-#
-# Load the key package
-#
-  require "./menu.pl";
+# Perl4/curseperl ONLY!
+# Uncomment these lines for use with Perl4/curseperl
+# (Did you remember to run "create_menu.pl"?)
+#require "./menu.pl";           # Main menu package (Perl4 only)
+#require "./menuutil.pl";       # For "pause" and "print_nl" routines.
 
   $SIG{'INT'} = 'cleanup';	# Set signal handler
-  $| = 1;			# Command buffering on stdout
+  $| = 1;			# Flush after every write to stdout
 
   $last_arrow = 0;		# For arrow latching
   $last_top = 0;		# For arrow latching
@@ -34,7 +38,7 @@ use Curses;
 #  MAIN_MENU -- Main (top level) menu
 #
   while (1) {
-    &menu_init(1,"EasyView Version 3.3");
+    &menu_init(1,"EasyView Version 4.0");
     &menu_item("Exit","%UP%");
     &menu_item("List files in current directory","dir_list");
     &menu_item("Page through text files","page_file");

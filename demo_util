@@ -14,18 +14,23 @@
 #          Ames, IA  50011
 #          Email: skunz@iastate.edu
 #
-# Date:    February 1996
+# Date:    February 1997
 #**************************************************************************
 
+# Perl5+Curses ONLY!
 # Comment these lines for use with Perl4/curseperl
 BEGIN { $Curses::OldCurses = 1; }
-use Curses;
+use Curses;                     # PerlMenu needs "Curses"
+use perlmenu;                   # Main menu package (Perl5 only)
+require "./menuutil.pl";        # For "pause" and "print_nl" routines.
 
-#
-# Load the key package (and utility routines)
-#
-require "./menu.pl";
-require "./menuutil.pl";
+# Perl4/curseperl ONLY!
+# Uncomment these lines for use with Perl4/curseperl
+# (Did you remember to run "create_menu.pl"?)
+#require "./menu.pl";           # Main menu package (Perl4 only)
+#require "./menuutil.pl";       # For "pause" and "print_nl" routines.
+
+$| = 1;				# Flush after every write to stdout
 
 #
 # Required global variables are $window, $row, and $col.
@@ -55,6 +60,7 @@ $window = $row = $col = 0;
     &new_line(1);
     &print_nl("Sigh ... and it was the best demo!",1);
     if (&query("Are you SURE you don't want to see it?","yn") eq "y") {
+      &endwin;
       exit(0);
     }
   }
@@ -66,5 +72,6 @@ $window = $row = $col = 0;
 # All done - clean up and go home.
   &clear_screen();
   &refresh();
+  &endwin;
   exit(0);
 

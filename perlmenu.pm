@@ -1,7 +1,7 @@
 #****************************************************************************
-# menu.pl -- Perl Menu Support Facility 
+# perlmenu.pm -- Perl Menu Support Facility 
 #
-# Version: 3.3
+# Version: 4.0
 #
 # Author:  Steven L. Kunz
 #          Networked Applications
@@ -43,11 +43,15 @@
 #                                      support, template Control-L refresh.
 #          Version 3.3 -- Feb, 1996 -- Bug fixes, help routines, templates
 #                                      from arrays ("menu_load_template_array")
+#          Version 4.0 -- Feb, 1997 -- Converted to "pm" module, highlighted
+#				       selection cursor pref, Multiple-column
+#				       menus pref, bug fixes
 #
 # Notes:   Perl4 - Requires "curseperl"
 #                  (distributed with perl 4.36 in the usub directory)
-#          Perl5 - Requires "Curses" extension
-#                  (ftp://ftp.ncsu.edu/pub/math/wsetzer)
+#          Perl5 - Requires "Curses" extension available from any CPAN
+#		   site (http://www.perl.com/CPAN/CPAN.html).
+#                  
 #                  Put the following at top of your code:
 #
 #                    BEGIN { $Curses::OldCurses = 1; }
@@ -62,7 +66,7 @@
 #             $sel_text = &menu_display("Select using arrow keys");
 #
 # PerlMenu - Perl library module for curses-based menus & data-entry templates
-# Copyright (C) 1992-96  Iowa State University Computation Center
+# Copyright (C) 1992-97  Iowa State University Computation Center
 #                        Ames, Iowa  (USA)
 #
 #    This Perl library module is free software; you can redistribute it
@@ -83,6 +87,43 @@
 
 package perlmenu;
 
+#%PERL5ONLY% DO NOT REMOVE OR CHANGE THIS LINE
+BEGIN { $Curses::OldCurses = 1; }
+use Curses;
+require Exporter;
+@ISA = qw(Exporter);
+@EXPORT = qw(
+  menu_curses_application menu_prefs menu_template_prefs menu_shell_command
+  menu_quit_routine menu_init menu_paint_file menu_setexit menu_getexit
+  menu_item menu_display menu_display_radio menu_display_mult menu_getstr
+  menu_template_setexit menu_load_template menu_load_template_array
+  menu_overlay_clear menu_overlay_template menu_display_template 
+  );
+#%PERL5ONLY% DO NOT REMOVE OR CHANGE THIS LINE
+
+# PERL5 ONLY (GETCAP PROBLEMS)
+# Uncomment these statements if you DON'T have "getcap()" OR
+# if the demo doesn't appear to work (there's a bug in some getcap's).
+#
+#if ($] >= 5.001) {			# Perl5 ONLY!
+#package Perl5::Menu_PL::Compat;	# Don't pollute perlmenu.pm namespace
+#require Term::Cap;			# Get Tgetent package
+#$term = Tgetent Term::Cap { OSPEED => 9600 };	   # Define entry
+#sub perlmenu::getcap { $term->{"_" . shift()} };  # Define local subroutine
+#}
+
+# PERL4 ONLY (GETCAP PROBLEMS)
+# Uncomment these statements if you DON'T have "getcap()" OR
+# if the demo doesn't appear to work (there's a bug in some getcap's).
+#
+#if (($] >= 4.0) && ($] < 5.0)) {	# Perl4 ONLY!
+#package simgetcap;			# Don't pollute menu.pl namespace
+#$ispeed = $ospeed = 13;		# Set old-style "9600";
+#require "termcap.pl";			# Get Tgetent package
+#&Tgetent($ENV{'TERM'});		# Load $TC array
+#sub main'simgetcap { $TC{shift}; };	# Define local subroutine
+#}
+
 # Preferences (set by "menu_pref")
 $curses_application = 0;	# Application will do initscr, endwin
 $center_menus = 0;		# Center menus
@@ -90,6 +131,8 @@ $gopher_like = 0;		# More gopher-like arrow keys
 $disable_quit = 0;		# Disable "Quit" hot-key
 $quit_prompt = "";		# Override Quit prompt
 $quit_default = "y";		# Quit default response
+$multiple_column = 0;		# Multiple column menus
+$highlight = 0;			# Highlight selection points
 
 $menu_exit_routine = "main'clear";
 $menu_generic_help_routine = "menu_default_show_help";
@@ -109,13 +152,20 @@ $menu_bot_titler = "";	# Bottom title builder routine
 $did_initterm = 0;	# We already got escape sequences for arrows, etc.
 $window = 0;		# Base window
 $xrow = $xcol = 0;
-$first_line = $last_line = $items_per_screen = $arrow_line = 0;
+$first_line = $last_line = $item_lines_per_screen = 0;
+$items_per_screen = $items_per_line = 0;
+$arrow_col = $arrow_line = 0;
+$max_sel_line = $max_sel_col = 0;
+$menu_top_item = 0;
+$arrow_spec_row = $arrow_spec_col = 0;
  
 @menu_exitkeys = ();	# Exit-key strings
 $menu_lastexit = "";	# Exit-key string that caused the last exit
 $show_mail = "";
 $max_item_len = 0;	# Length of longest selection text
-$xpos = 0;		# Leftmost column of menu (for centering)
+$left_margin = 0;	# Leftmost column of menu (for centering)
+$prepend_len = 0;	# Length of text we prepend to each selection
+$column_width = 0;	# Width of each item in column
 
 $ku = $ansi_ku = $kd = $ansi_kd = "";
 $field = 0;			# Count of loaded template fields
@@ -163,30 +213,6 @@ $yank_line      = "\cU";
 # buffer
 $kill_buffer    = "";
 
-# PERL5 ONLY -- Uncomment these statements if you DON'T have "getcap()"
-#               OR if the demo doesn't appear to work (there's a bug in
-#               some getcap()'s).
-#
-#  This is for perl5.000
-#
-#if ($] == 5.000)
-#{
-#require Term::Cap;                     # Get Tgetent package
-#$Term::Cap::ospeed = 9600;             # Suppress "nospeed" warning
-#Term::Cap::Tgetent();                  # Define entry
-#*main::getcap = sub { $Term::Cap::TC{shift} };  # Define local subroutine
-#}
-#
-#  This is for perl5.001
-#
-#if ($] >= 5.001)
-#{
-#package Perl5::Menu_PL::Compat;        # Don't pollute menu.pl namespace
-#require Term::Cap;                     # Get Tgetent package
-#$term = Tgetent Term::Cap { OSPEED => 9600 };  # Define entry
-#sub main::getcap { $term->{"_" . shift()} };  # Define local subroutine
-#}
-
 #**********
 #  MENU_CURSES_APPLICATION
 #
@@ -200,12 +226,12 @@ $kill_buffer    = "";
 #
 #  Returns:	Main window (either passed in or gotten here)
 #**********
-sub main'menu_curses_application {
+sub menu_curses_application {
   ($window) = @_;
   $curses_application = 1;
 
 # Sanity check.  If no window, get one.
-  if (!$window) { $window = &main'initscr(); }
+  if (!$window) { $window = &initscr(); }
 
   $window;
 }
@@ -215,18 +241,23 @@ sub main'menu_curses_application {
 #
 #  Function:	Establish general default preferences for menu style.
 #
-#  Call format:	&menu_pref(center_menus,gopher_like);
+#  Call format:	&menu_pref(center_menus,gopher_like,quit_flag,quit_prompt,
+#			   quit_def_resp,mult_col_menu,highlight_sel_text);
 #
 #  Arguments:	- Boolean flag (0=left justified menus, 1=centered menus)
 #		- Boolean flag (0=normal, 1=more gopher-like)
 #		- Boolean flag (0=allow quit, 1=disable quit)
 #		- String with default "Quit" prompt
 #		- String with "Quit" default response character
+#		- Boolean flag (0=single column menus, 1=multiple column menus
+#		- Boolean flag (0=arrow in front of selection text,
+#				1=highlight selection text (no arrow)
 #
 #  Returns:	Nothing
 #**********
-sub main'menu_prefs {
-  ($center_menus,$gopher_like,$disable_quit,$quit_prompt,$quit_default) = @_;
+sub menu_prefs {
+  ($center_menus,$gopher_like,$disable_quit,$quit_prompt,$quit_default,
+   $multiple_column,$highlight) = @_;
 
 # Don't allow bad default characters.
   if (($quit_default ne "Y") && ($quit_default ne "y") &&
@@ -252,7 +283,7 @@ sub main'menu_prefs {
 #
 #  Returns:	Nothing
 #**********
-sub main'menu_template_prefs {
+sub menu_template_prefs {
   ($req_lmark_set,$req_lmark_clear,$req_lmark_attr,
    $req_rmark_set,$req_rmark_clear,$req_rmark_attr) = @_;
 }
@@ -270,7 +301,7 @@ sub main'menu_template_prefs {
 #
 #  Returns:	Nothing
 #**********
-sub main'menu_shell_command { ($menu_shell_text) = @_; }
+sub menu_shell_command { ($menu_shell_text) = @_; }
 
 #**********
 #  MENU_QUIT_ROUTINE
@@ -285,7 +316,7 @@ sub main'menu_shell_command { ($menu_shell_text) = @_; }
 #  Returns:	Nothing.
 #
 #**********
-sub main'menu_quit_routine { $menu_exit_routine = "main'@_"; }
+sub menu_quit_routine { $menu_exit_routine = "main'@_"; }
 
 #**********
 #  MENU_HELP_ROUTINE
@@ -301,7 +332,7 @@ sub main'menu_quit_routine { $menu_exit_routine = "main'@_"; }
 #  Returns:	Nothing.
 #
 #**********
-sub main'menu_help_routine {
+sub menu_help_routine {
   local($rtn) = @_;  
   if ($rtn eq "") {
     $menu_generic_help_routine = "menu_default_show_help";
@@ -334,41 +365,46 @@ sub main'menu_help_routine {
 #		3) If this is the FIRST menu_init call and the optional
 #		   third opernd is "1", it is the "top" menu.
 #**********
-sub main'menu_init {
+sub menu_init {
   ($menu_numbered,$menu_top_title,$menu_is_top_one,$sub_titles,$bot_titles,
    $item_help) = @_;
   local($i,$justify);
 
 # Perform initscr if not a curses application
-  if (!$curses_application && !$window) { $window = &main'initscr(); }
+  if (!$curses_application && !$window) { $window = &initscr(); }
 
 # Load "magic sequence" array based on terminal type
   if (!$did_initterm) {		# Get terminal info (if we don't have it).
     &defbell() unless defined &bell;
 
+# Method 1 (getcap)
 # Uncomment if you have "getcap"
-    $ku = &main'getcap('ku');	# Cursor-up
-    $kd = &main'getcap('kd');	# Cursor-down
-    $kr = &main'getcap('kr');	# Cursor-right
-    $kl = &main'getcap('kl');	# Cursor-left
-    $cr = &main'getcap('cr');	# Carriage-return
-    $nl = &main'getcap('nl');	# New-line
+    $ku = &getcap('ku');	# Cursor-up
+    $kd = &getcap('kd');	# Cursor-down
+    $kr = &getcap('kr');	# Cursor-right
+    $kl = &getcap('kl');	# Cursor-left
+    $cr = &getcap('cr');	# Carriage-return
+    $nl = &getcap('nl');	# New-line
 
+# Method 2 (tigetstr)
 # Uncomment if you have tigetstr (Solaris) instead of "getcap"
-#    $ku = &main'tigetstr('kcuu1');	# Cursor-up
-#    $kd = &main'tigetstr('dcud1');	# Cursor-down
-#    $kr = &main'tigetstr('kcuf1');	# Cursor-right
-#    $kl = &main'tigetstr('kcub1');	# Cursor-left 
-#    $cr = &main'tigetstr('cr');	# Carriage-return
-#    $nl = &main'tigetstr('nl');	# New-line
+#    $ku = &tigetstr('kcuu1');	# Cursor-up
+#    $kd = &tigetstr('dcud1');	# Cursor-down
+#    $kr = &tigetstr('kcuf1');	# Cursor-right
+#    $kl = &tigetstr('kcub1');	# Cursor-left 
+#    $cr = &tigetstr('cr');	# Carriage-return
+#    $nl = &tigetstr('nl');	# New-line
 
+# Method 3 (tput)
 # Uncomment if you have terminfo (and tput) instead of "getcap"
-#    $ku = `tput kcuu1`;         # Cursor-up
-#    $kd = `tput kcud1`;         # Cursor-down
-#    $kr = `tput kcuf1`;         # Cursor-right
-#    $kl = `tput kcub1`;         # Cursor-left
-#    $cr = `tput kent`;          # Carriage-return
-#    $nl = `tput nel`;           # New-line
+#    $ku = `tput kcuu1`;	# Cursor-up
+#    $kd = `tput kcud1`;	# Cursor-down
+#    $kr = `tput kcuf1`;	# Cursor-right
+#    $kl = `tput kcub1`;	# Cursor-left
+#    $cr = `tput kent`;		# Carriage-return
+#				# HP-UX 9.05 users: try $cr = `tput cr` if
+#				#                   "tput kent" gives errors
+#    $nl = `tput nel`;		# New-line
 
     $ansi_ku = "\033[A";	# Ansi cursor-up (for DEC xterm)
     $ansi_kd = "\033[B";	# Ansi cursor-down (for DEC xterm)
@@ -427,15 +463,16 @@ sub main'menu_init {
       $last_line--;		# Blank line between menu and bottom titles
     }
   }
-  $items_per_screen = $last_line - $first_line + 1;
+  $item_lines_per_screen = $last_line - $first_line + 1;
   $arrow_line = $first_line;    # Arrow on top item by default
+  $arrow_col = 0;		# Arrow on leftmost item by default
 
 # Process item help routine.
   $menu_item_help_routine = "";
   if ($item_help) { $menu_item_help_routine = "main'$item_help"; }
   
 # Enable "top menu" functions if first menu is a top menu.
-  if (($menu_is_first_one) && ($menu_is_top_one)) { $menu_top_activated = 1; }
+  if ($menu_is_first_one && $menu_is_top_one) { $menu_top_activated = 1; }
   $menu_is_first_one = 0;
 
 # Init selection array
@@ -465,7 +502,7 @@ sub main'menu_init {
 #
 #  Returns:	0=Success, 1=Cannot open file
 #***********
-sub main'menu_paint_file {
+sub menu_paint_file {
   ($paint_file,$top_bot) = @_;
   local($concat_string,$i);
 
@@ -497,8 +534,8 @@ sub main'menu_paint_file {
   }
 
 # Re-calculate some key variables
-  $items_per_screen = $last_line - $first_line + 1;
   $arrow_line = $first_line;    # Arrow on top item by default
+  $arrow_col = 0;
 
   0;
 }
@@ -514,7 +551,7 @@ sub main'menu_paint_file {
 #
 #  Arguments:  exit_key_array - the keys to end menu_getstr on
 #********** 
-sub main'menu_setexit { @menu_exitkeys = @_; }
+sub menu_setexit { @menu_exitkeys = @_; }
 
 #********** 
 #  MENU_GETEXIT
@@ -522,7 +559,7 @@ sub main'menu_setexit { @menu_exitkeys = @_; }
 #  Function:  Returns the key last used to exit menu_getstr
 #
 #**********
-sub main'menu_getexit { return($menu_lastexit); }
+sub menu_getexit { return($menu_lastexit); }
 
 #***********
 #  PROC_TITLES
@@ -565,7 +602,7 @@ sub proc_titles {
       $temp_title[$i] = substr($temp_title[$i],1);
     } else { $justify = ""; }
 
-    if (length($temp_title[$i]) >= $main'COLS) {
+    if (length($temp_title[$i]) >= $main'COLS-1) {
       $temp_title[$i] = substr($temp_title[$i],0,$main'COLS-1);
       $temp_title_col[$i] = 0;
     } else {
@@ -595,16 +632,17 @@ sub proc_titles {
 #
 #  Returns:	Number of items currently in the menu.
 #***********
-sub main'menu_item {
+sub menu_item {
   local($item_text,$item_sel,$item_set) = @_;
 
 # Sanity check
-  if ($items_per_screen <= 0) { return(0); }
+  if ($item_lines_per_screen <= 0) { return(0); }
   if (!$item_text) { return($menu_index); }
   if (!$item_set) { $item_set = 0; }
 
 # Adjust max length value (for centering menu)
-  if (length($item_text) > $max_item_len) { $max_item_len = length($item_text); }
+  $_ = length($item_text);
+  if ($_ > $max_item_len) { $max_item_len = $_; }
 
 # Load into arrays and adjust index
   $menu_sel_text[$menu_index] = $item_text;
@@ -624,6 +662,8 @@ sub main'menu_item {
 #  Arguments:   - Prompt text (for the bottom line of menu).
 #		- Line number offset for the arrow (defaults to zero).
 #		- Index of top item on screen (defaults to zero).
+#		- Column number offset for the arrow (multiple-column mode
+#		  only, defaults to zero).
 #
 #  Returns:     Selected action string (from second param on &menu_item)
 #		%UP%    -- "u"|"U" pressed (or "t"|"T" and looking for top)
@@ -634,23 +674,24 @@ sub main'menu_item {
 #		2) This routine exits directly (after calling the optional 
 #		   "quit" routine) if "q"|"Q" is pressed.
 #**********
-sub main'menu_display {
-  ($menu_prompt,$arrow_spec,$menu_top_item) = @_;
+sub menu_display {
+  ($menu_prompt,$arrow_spec_row,$menu_top_item,$arrow_spec_col) = @_;
   local($ret);
 
 # Check for no "menu_item" calls.
   $total_items = $#menu_sel_text + 1;
   if ($total_items <= 0) {
-    &main'nocbreak();		# ALWAYS turn off "cbreak" mode
-    &main'echo();		# ALWAYS turn on "echo"
+    &nocbreak();		# ALWAYS turn off "cbreak" mode
+    &echo();		# ALWAYS turn on "echo"
     return("%EMPTY%");
   }
 
-  &main'clear(); $xrow = $xcol = 0;
+  &clear(); $xrow = $xcol = 0;
   $last_menu_top_item = -1;	# Force drawing of menu items
-  $ret=&menu_display_internal(0,$menu_prompt,$arrow_spec,$menu_top_item);
-  if ($#_ > 0) { $_[1] = $arrow_spec; }
+  $ret = &menu_display_internal(0,$menu_prompt,0);
+  if ($#_ > 0) { $_[1] = $arrow_spec_row; }
   if ($#_ > 1) { $_[2] = $menu_top_item; }
+  if ($#_ > 2) { $_[3] = $arrow_spec_col; }
   &menu_return_prep();
   $ret;
 }
@@ -677,20 +718,20 @@ sub main'menu_display {
 #		2) This routine exits directly (after calling the optional 
 #		   "quit" routine) if "q"|"Q" is pressed.
 #**********
-sub main'menu_display_radio {
+sub menu_display_radio {
   ($menu_prompt,$current,$done_text) = @_;
-  ($last_arrow,$last_top) = 0;
 
 # Check for no "menu_item" calls.
   $total_items = $#menu_sel_text + 1;
   if ($total_items <= 0) {
-    &main'nocbreak();		# ALWAYS turn off "cbreak" mode
-    &main'echo();		# ALWAYS turn on "echo"
+    &nocbreak();		# ALWAYS turn off "cbreak" mode
+    &echo();		# ALWAYS turn on "echo"
     return("%EMPTY%");
   }
 
-  &main'clear(); $xrow = $xcol = 0;
+  &clear(); $xrow = $xcol = 0;
   $last_menu_top_item = -1;	# Force drawing of menu items
+  $arrow_spec_row = $arrow_spec_col = $menu_top_item = 0; # Reset
 
 # Insert our top selection item (and adjust max length value)
   if ($done_text eq "") { $done_text = "(Accept this setting)"; }
@@ -701,8 +742,7 @@ sub main'menu_display_radio {
   $menu_index++;
 
   while (1) {
-    $ret = &menu_display_internal(1,$menu_prompt,$last_arrow,$last_top,
-				  $current);
+    $ret = &menu_display_internal(1,$menu_prompt,$current);
     last if $ret eq "%DONE%";
     if ($ret eq "%UP%") {
       &menu_return_prep();
@@ -735,21 +775,21 @@ sub main'menu_display_radio {
 #		2) This routine exits directly (after calling the optional 
 #		   "quit" routine) if "q"|"Q" is pressed.
 #**********
-sub main'menu_display_mult {
+sub menu_display_mult {
   ($menu_prompt,$done_text) = @_;
-  local($last_arrow,$last_top,$i) = 0;
-  local($ret);
+  local($i,$ret) = 0;
 
 # Check for no "menu_item" calls.
   $total_items = $#menu_sel_text + 1;
   if ($total_items <= 0) {
-    &main'nocbreak();		# ALWAYS turn off "cbreak" mode
-    &main'echo();		# ALWAYS turn on "echo"
+    &nocbreak();		# ALWAYS turn off "cbreak" mode
+    &echo();		# ALWAYS turn on "echo"
     return("%EMPTY%");
   }
 
-  &main'clear(); $xrow = $xcol = 0;
+  &clear(); $xrow = $xcol = 0;
   $last_menu_top_item = -1;	# Force drawing of menu items
+  $arrow_spec_row = $arrow_spec_col = $menu_top_item = 0; # Reset
 
 # Insert our top selection item (and adjust max length value)
   if ($done_text eq "") { $done_text = "(Done with selections)"; }
@@ -762,7 +802,7 @@ sub main'menu_display_mult {
 
 # Loop, allowing toggle of selections, until done.
   while (1) {
-    $ret = &menu_display_internal(2,$menu_prompt,$last_arrow,$last_top,0);
+    $ret = &menu_display_internal(2,$menu_prompt,0);
     last if $ret eq "%DONE%";
     if (($ret eq "%UP%") || ($ret eq "%EMPTY%")) {
       @selected_action = (); 
@@ -818,7 +858,7 @@ sub main'menu_display_mult {
 #                  modes before returning.
 #		2) This routine checks for the right edge of the screen.
 #**********
-sub main'menu_getstr {
+sub menu_getstr {
   local($row,$col,$prompt,$cleanup,$default,$maxlen,$noshow,$dtype,$win,$cpos)
 	= @_;
   local($prompt_col,$left_col,$action,$string,$i,$overstrike);
@@ -827,8 +867,8 @@ sub main'menu_getstr {
   if (!$win) { $win = $window; } # Use main window by default
 
 # Set cbreak, noecho.
-  &main'cbreak();
-  &main'noecho();
+  &cbreak();
+  &noecho();
 
 # Make sure the default is not longer than the maximum lengths
   if (($maxlen > 0) && (length($default) > $maxlen)) {
@@ -836,13 +876,13 @@ sub main'menu_getstr {
   }
   
 # Clear our area. Place prompt and any default on the screen
-  &main'wmove($win,$row,$col);
-  &main'wclrtoeol($win);
-  if ($prompt ne "") { &main'waddstr($win,$prompt); }
+  &wmove($win,$row,$col);
+  &wclrtoeol($win);
+  if ($prompt ne "") { &waddstr($win,$prompt); }
   if ($default ne "") {
     if ($noshow) { 
-      for ($i = 0; $i < length($default); $i++) { &main'waddstr($win,"*"); }
-    } else { &main'waddstr($win,$default); }
+      for ($i = 0; $i < length($default); $i++) { &waddstr($win,"*"); }
+    } else { &waddstr($win,$default); }
   }
 
 # Position cursor for data input
@@ -850,8 +890,8 @@ sub main'menu_getstr {
   $left_col = $prompt_col + length($prompt);
   if (!$cpos) { $col = $left_col + length($default); }
   else { $col = $cpos - 1; }
-  &main'wmove($win,$row,$col);
-  &main'wrefresh($win);
+  &wmove($win,$row,$col);
+  &wrefresh($win);
 
 # Set max col to right edge of screen if maxlen passed.
 # If single character field, allow "overstrike" mode.
@@ -877,7 +917,7 @@ sub main'menu_getstr {
       if ($i+1 > length($string)) { &bell(); }
       else {
 	$col++; $i++;
-	&main'wmove($win,$row,$col);
+	&wmove($win,$row,$col);
       }
     }
     elsif (($action eq $kl) || ($action eq $ansi_kl)
@@ -885,21 +925,21 @@ sub main'menu_getstr {
       if ($i-1 < 0) { &bell(); }
       else {
 	$col--; $i--;
-	&main'wmove($win,$row,$col);
+	&wmove($win,$row,$col);
       }
     }
     elsif (($action eq "\177") || ($action eq "\010")) {	# Delete/BS
       if ($i-1 < 0) { &bell(); }
       else {
 	$col--; $i--;
-	&main'wmove($win,$row,$col);
-	&main'wdelch($win);
+	&wmove($win,$row,$col);
+	&wdelch($win);
 	$string = substr($string,0,$i).substr($string,$i+1);
       }
     }
     elsif ($action eq $delete_right) {				# Delete right
       if ($i < length($string)) {
-	&main'wdelch($win);
+	&wdelch($win);
 	$string = substr($string,0,$i).substr($string,$i+1);
       }
       else { &bell(); }
@@ -908,12 +948,12 @@ sub main'menu_getstr {
 	   ($action eq "\n")) {					# Terminate
       $last_window_cpos = $col + 1;	# Save current column (not offset)
       if ($cleanup) {
-	&main'wmove($win,$row,$prompt_col);	# Clear our stuff
-	&main'wclrtoeol($win);
-	&main'wrefresh($win);
+	&wmove($win,$row,$prompt_col);	# Clear our stuff
+	&wclrtoeol($win);
+	&wrefresh($win);
       }
-      &main'nocbreak();		# ALWAYS turn off "cbreak" mode
-      &main'echo();		# ALWAYS turn on "echo"
+      &nocbreak();		# ALWAYS turn off "cbreak" mode
+      &echo();		# ALWAYS turn on "echo"
       return($string);
     }
     elsif (($action eq $ku) || ($action eq $ansi_ku) ||
@@ -923,16 +963,16 @@ sub main'menu_getstr {
     } 
     elsif ($action eq $begin_of_line) {		# Go to begin-of-line
       $col = $prompt_col + length($prompt); $i=0;
-      &main'wmove($win,$row,$col);
+      &wmove($win,$row,$col);
     }
     elsif ($action eq $end_of_line) {		# Go to end-of-line
       $col = $prompt_col + length($prompt) + length($string);
       $i   = length($string);
-      &main'wmove($win,$row,$col);
+      &wmove($win,$row,$col);
     }
     elsif ($action eq $kill_line) {		# Delete to end-of-line
       if ($i != length($string)) { # Not at end of line
-	&main'wclrtoeol($win);
+	&wclrtoeol($win);
 	$kill_buffer = substr($string,$i);
 	$string = substr($string,0,$i)
       } else { &bell(); }
@@ -948,10 +988,10 @@ sub main'menu_getstr {
 	  if (length($kill_buffer) != 1) { &bell(); }
 	  else {
 	    # Delete single-character field
-	    &main'wmove($win,$row,$col);
-	    &main'wdelch($win);
+	    &wmove($win,$row,$col);
+	    &wdelch($win);
 	    # Yank single-character kill_buffer
-	    &main'winsch($win,ord($kill_buffer));
+	    &winsch($win,ord($kill_buffer));
             $string = $kill_buffer;
 	  }
 	}
@@ -963,46 +1003,46 @@ sub main'menu_getstr {
 	  if ($noshow) {
 	    $stars = '*' x length($kill_buffer);
 	    # Draw yanked text
-	    &main'waddstr($win,$stars."\0");
+	    &waddstr($win,$stars."\0");
 	    # Draw rest of string
 	    $stars = '*' x length(substr($string,$i));
-            &main'waddstr($win,$stars."\0");
+            &waddstr($win,$stars."\0");
 	  }
 	  else {
             # Draw yanked text
-	    &main'waddstr($win,$kill_buffer."\0");
+	    &waddstr($win,$kill_buffer."\0");
 	    # Draw rest of string
-	    &main'waddstr($win,substr($string,$i)."\0");
+	    &waddstr($win,substr($string,$i)."\0");
           }
 	  $string = substr($string,0,$i) . $kill_buffer . substr($string,$i);
 	  $col += length($kill_buffer);
 	  $i   += length($kill_buffer);
-	  &main'wmove($win,$row,$col);
+	  &wmove($win,$row,$col);
        }
      }
     }
     else { # Any other character
       if ($overstrike) {	# Delete only char on single-char field
-	&main'wmove($win,$row,$col);
-	&main'wdelch($win);
+	&wmove($win,$row,$col);
+	&wdelch($win);
 	$string = "";
       }
       if ($left_col + length($string) + 1 > $maxcol) { &bell(); }
       else {
 	if (($dtype == 1) && (index("0123456789",$action) < 0)) { &bell(); }
 	else {
-	  &main'wmove($win,$row,$col);	# Insert the character on the screen
-	  if ($noshow) { &main'winsch($win,ord("*")); }
-	  else { &main'winsch($win,ord($action)); }
+	  &wmove($win,$row,$col);	# Insert the character on the screen
+	  if ($noshow) { &winsch($win,ord("*")); }
+	  else { &winsch($win,ord($action)); }
 	  $string = substr($string,0,$i).$action.substr($string,$i);
 	  if (!$overstrike) {
 	    $col++; $i++;
-	    &main'wmove($win,$row,$col);
+	    &wmove($win,$row,$col);
 	  }
 	}
       }
     }
-    &main'wrefresh($win);
+    &wrefresh($win);
   }
 }
 
@@ -1017,8 +1057,6 @@ sub main'menu_getstr {
 #
 #  Arguments:   - Menu type (0=simple, 1=radio, 2=multiple-select).
 #               - Prompt text (for the bottom line of menu).
-#		- Line number offset for the arrow (defaults to zero).
-#		- Index of top item on screen (defaults to zero).
 #		- Current selection (radio only).
 #
 #  Returns:     Selected action string (from second param on &menu_item)
@@ -1027,8 +1065,8 @@ sub main'menu_getstr {
 #               %DONE%  -- Done with selections (radio and mult only)
 #**********
 sub menu_display_internal {
-  ($menu_type,$menu_prompt,$arrow_spec,$menu_top_item,$radio_sel) = @_;
-  local($i,$search,$low_sel);
+  ($menu_type,$menu_prompt,$radio_sel) = @_;
+  local($i,$search,$low_sel,$do_scroll,$move_amt);
 
 # If looking for top menu, return with "%UP%".
   if ($finding_top) {
@@ -1039,13 +1077,30 @@ sub menu_display_internal {
 # Check for no "menu_item" calls.
   $total_items = $#menu_sel_text + 1;
   if ($total_items <= 0) {
-    &main'nocbreak();		# ALWAYS turn off "cbreak" mode
-    &main'echo();		# ALWAYS turn on "echo"
+    &nocbreak();		# ALWAYS turn off "cbreak" mode
+    &echo();		# ALWAYS turn on "echo"
     return("%EMPTY%");
   }
 
-  &main'cbreak();		# cbreak mode (each character available)
-  &main'noecho();		# Menus are always "noecho"
+  &cbreak();		# cbreak mode (each character available)
+  &noecho();		# Menus are always "noecho"
+
+# Compute prepend length (for stuff we prepend to each selection text)
+  $prepend_len = 0;				# Assume nothing
+  if (!$highlight && $menu_numbered) { $prepend_len += 2; } # Adjust for "->"
+  if ($menu_numbered) { $prepend_len += 6; }	# Adjust for "nnnn) "
+  if ($menu_type) { $prepend_len += 4; }	# Adjust for "[X] "
+
+# Calculate items per line and items per screen (based on mult-column pref)
+  if ($multiple_column) {
+    $column_width = $prepend_len + $max_item_len + 1; # Always pad one blank
+    $items_per_line = int(($main'COLS-1)/$column_width);
+    if ($items_per_line <= 0) { $items_per_line = 1; }
+  } else {
+    $column_width = $prepend_len + $max_item_len;
+    $items_per_line = 1;
+  }
+  $items_per_screen = ($last_line - $first_line + 1) * $items_per_line;
 
   if ($total_items <= $items_per_screen) { $menu_single_page = 1; }
   else { $menu_single_page = 0; }
@@ -1073,21 +1128,21 @@ sub menu_display_internal {
   }
 
 # Validate/adjust paramaters.
-  $arrow_line = $arrow_spec + $first_line;
+  $arrow_line = $arrow_spec_row + $first_line;
   if ($menu_top_item + 1 > $total_items) { $menu_top_item = $total_items - 1; }
   if ($arrow_line < $first_line) { $arrow_line = $first_line; }
   if ($arrow_line > $last_line) { $arrow_line = $last_line; }
 
+  $arrow_col = $arrow_spec_col;
+  if ($arrow_col < 0) { $arrow_col = 0; }
+  elsif ($arrow_col > $items_per_screen - 1) {
+    $arrow_col = $items_per_screen - 1;
+  }
+
 # Compute leftmost column (for left-justified or centered menus)
-  $xpos = 0; # Assume left-justified menu (no centering)
+  $left_margin = 0; # Assume left-justified menu (no centering)
   if ($center_menus) {
-    if ($menu_numbered) { $xpos += 8; } # Adjust for "-> nnn) "
-    if (($menu_type == 1) || ($menu_type == 2)) {
-      if ($max_item_len > length($menu_sel_text[0])) {
-	$xpos += 4; # Adjust for selection box "[X] "
-      }
-    }
-    $xpos = int($main'COLS/2) - int(($xpos+$max_item_len)/2);
+    $left_margin = int($main'COLS/2) - int($column_width/2) * items_per_line;
   }
 
 # Clear screen and add top title and bottom prompt
@@ -1110,7 +1165,7 @@ sub menu_display_internal {
     if ($#menu_exitkeys) { &check_exit_keys(); } # Check any exit keys
 
 # If trying to be more "gopher-like", translate now.
-    if ($gopher_like) {
+    if ($gopher_like && ($items_per_line == 1)) {
       if (($action eq $kr) || ($action eq $ansi_kr)) { $action = "\n"; }
       if (($action eq $kl) || ($action eq $ansi_kl)) { $action = "u"; }
     }
@@ -1119,23 +1174,56 @@ sub menu_display_internal {
     $move_amt = 0;
     if ($action ne "") {
       $last_arrow_line = $arrow_line;
-      if (($action eq $kd) || ($action eq $ansi_kd) ||		# Down-arrow
-          ($action eq $next_field) ||
-	  ($action eq $kr) || ($action eq $ansi_kr)) {		# Right-arrow
+      $last_arrow_col = $arrow_col;
+      if (($action eq $kd) || ($action eq $ansi_kd)) {		# Down-arrow
         $number = 0;
-        if ($arrow_line < $max_sel_line) { $arrow_line++; }
-        else {
-	  if ($gopher_like) {
-	    $move_amt = $items_per_screen;
-	    $arrow_line = $first_line;
-	  } else {
-	    if ($arrow_line == $last_line) { $move_amt = 1; }
+	$do_scroll = 1;
+	if ($items_per_line > 1) {
+	  if (($arrow_line+1 >= $max_sel_line) && ($arrow_col > $max_sel_col)) {
+	    $do_scroll = 0;
+	  }
+	}
+	if ($do_scroll) {
+	  if ($arrow_line < $max_sel_line) { $arrow_line++; }
+	  else {
+	    if ($gopher_like) {
+	      $move_amt = $items_per_screen;
+	      $arrow_line = $first_line;
+	    } else {
+	      if ($arrow_line == $last_line) { $move_amt = $items_per_line; }
+	    }
 	  }
 	}
       }
-      elsif (($action eq $ku) || ($action eq $ansi_ku) ||	# Up-arrow
-             ($action eq $prev_field) ||
-	     ($action eq $kl) || ($action eq $ansi_kl)) {	# Left-arrow
+      if (($action eq $next_field) || ($action eq $kr) ||
+	  ($action eq $ansi_kr)) {				# Right-arrow
+        $number = 0;
+	$do_scroll = 1;
+	if ($items_per_line > 1) {
+	  if (($arrow_line == $max_sel_line) && ($arrow_col == $max_sel_col)) {
+	    $item = $menu_top_item+($arrow_line-$first_line)*$items_per_line+$arrow_col;
+	    if (($item == $menu_index-1) && !$gopher_like) { $do_scroll = 0; }	
+	  } else {
+	    if ($arrow_col + 1 < $items_per_line) {
+	      $arrow_col++;
+	      $do_scroll = 0;
+	    }
+	  }
+	}
+	if ($do_scroll) {
+	  $arrow_col = 0;
+	  if ($arrow_line < $max_sel_line) { $arrow_line++; }
+	  else {
+	    if ($gopher_like) {
+	      $move_amt = $items_per_screen;
+	      $arrow_line = $first_line;
+	    } else {
+	      if ($arrow_line == $last_line) { $move_amt = $items_per_line; }
+	    }
+	  }
+	}
+      }
+      elsif (($action eq $ku) || ($action eq $ansi_ku)) {	# Up-arrow
         $number = 0;
         if ($arrow_line > $first_line) { $arrow_line--; }
         else {
@@ -1146,7 +1234,38 @@ sub menu_display_internal {
 		$arrow_line = $menu_top_item + $arrow_line - 1; # Adjust arrow
 	      } else { $arrow_line = $last_line; }
 	    } else { $arrow_line = $last_line; }
-	  } else { $move_amt = -1; }
+	  } else { $move_amt = -$items_per_line; }
+	}
+      }
+      elsif (($action eq $prev_field) || ($action eq $kl) ||
+	     ($action eq $ansi_kl)) {				# Left-arrow
+        $number = 0;
+	$do_scroll = 1;
+	if ($items_per_line > 1) {
+	  if ($arrow_col > 0) {
+	    $arrow_col--;
+	    $do_scroll = 0;
+	  } else {
+	    if (($arrow_line > $first_line) || ($menu_top_item > 0)) {
+	      $arrow_col = $items_per_line - 1;
+	    } else {
+	      if ($gopher_like) { $arrow_col = $max_sel_col; }
+	      else { $do_scroll = 0; }
+	    }
+	  }
+	}
+	if ($do_scroll) {
+	  if ($arrow_line > $first_line) { $arrow_line--; }
+	  else {
+	    if ($gopher_like) {
+	      $move_amt = -$items_per_screen;
+	      if ($menu_top_item + $move_amt < 0) { # Moving before 1st item
+	        if ($menu_top_item > 0) { # Not currently on 1st page
+		  $arrow_line = $menu_top_item + $arrow_line - 1; # Adjust arrow
+	        } else { $arrow_line = $last_line; }
+	      } else { $arrow_line = $last_line; }
+	    } else { $move_amt = -$items_per_line; }
+	  }
 	}
       }
       elsif (($action eq "n") || ($action eq "N") ||		# Next
@@ -1157,14 +1276,16 @@ sub menu_display_internal {
       elsif (($action eq "b") || ($action eq "B")) {		# Begin
         $menu_top_item = 0;
 	$arrow_line = $first_line;
+	$arrow_col = 0;
 	$number = 0;
       }
       elsif (($action eq "e") || ($action eq "E")) {		# End
+	$number = 0;
 	if (! $menu_single_page) {
 	  $menu_top_item = $menu_index - $items_per_screen;
 	}
 	$arrow_line = $last_line;
-	$number = 0;
+	$arrow_col = $max_sel_col;
       }
       elsif (($action eq "p") || ($action eq "P")) {		# Previous
         $number = 0;
@@ -1191,9 +1312,9 @@ sub menu_display_internal {
       elsif (($action eq "m") || ($action eq "M") ||		# Match string
              ($action eq "=") || ($action eq "/")) {
 	if ($menu_type == 2) {
-	  $search = &main'menu_getstr($last_line+1,0,"Search string: ",1);
-	  &main'cbreak();		# menu_getstr turned this off
-	  &main'noecho();		# menu_getstr turned this on
+	  $search = &menu_getstr($last_line+1,0,"Search string: ",1);
+	  &cbreak();		# menu_getstr turned this off
+	  &noecho();		# menu_getstr turned this on
 	  if ($search) {		# Toggle selections
 	    $search =~ tr/A-Z/a-z/;
 	    $i = 1;  
@@ -1210,7 +1331,7 @@ sub menu_display_internal {
       }
       elsif (($action eq "r") || ($action eq "R") ||
 	     ($action eq $redraw_screen)) {			# Refresh
-	  &main'clear();
+	  &clear();
 	  &menu_top_bot();
 	  $last_menu_top_item = -1;
 	  &menu_page();
@@ -1220,16 +1341,16 @@ sub menu_display_internal {
 	  $arrow_line = $first_line;
 	  &menu_page();
       }
-      elsif ((($action eq "Q")||($action eq "q")) && (!$disable_quit)) { # Quit
-	&main'clear(); $xrow = $xcol = 0;
-	&main'move(0,0);
+      elsif ((($action eq "Q")||($action eq "q")) && !$disable_quit) { # Quit
+	&clear(); $xrow = $xcol = 0;
+	&move(0,0);
 	if ($quit_prompt eq "") { $ch = "Do you really want to quit?"; }
 	else { $ch = $quit_prompt; }
 	$ch .= " $quit_default";
-	&main'addstr($ch);
-	&main'move(0,length($ch) - 1);
-	&main'refresh();
-	$ch = &main'getch();
+	&addstr($ch);
+	&move(0,length($ch) - 1);
+	&refresh();
+	$ch = &getch();
 	if ($ch eq "") { &menu_hangup_proc(); }
 	if (($ch eq $cr) || ($ch eq $nl) || ($ch eq "\n")) {
 	  $ch = $quit_default;
@@ -1240,7 +1361,7 @@ sub menu_display_internal {
 	  if ($menu_exit_routine ne "") { &$menu_exit_routine(); }
 	  exit(0);
 	}
-	&main'clear(); $xrow = $xcol = 0;
+	&clear(); $xrow = $xcol = 0;
 	&menu_top_bot();	# Re-display current page
 	$last_menu_top_item = -1;
 	&menu_page();
@@ -1252,7 +1373,7 @@ sub menu_display_internal {
 	}
       }
       elsif (($action eq "T") || ($action eq "t")) {		# Top
-        if (($menu_top_activated) && (! $menu_is_top_one)) {
+        if ($menu_top_activated && !$menu_is_top_one) {
 	  $finding_top = 1;
 	  return("%UP%");
 	}
@@ -1261,19 +1382,19 @@ sub menu_display_internal {
 	     ($action eq "?")) {
 	if (($action eq "?") && ($menu_item_help_routine ne "")) {
 	  if ($number) { $item = $number - 1; }
-	  else { $item = $menu_top_item + $arrow_line - $first_line; }
+	  else { $item = $menu_top_item+($arrow_line-$first_line)*$items_per_line+$arrow_col; }
 	  if (($item < $menu_top_item) || ($item > $menu_bot_item)) { 
 	    &bell();
 	    $number = 0;
 	  }
 	  else {
 	    &$menu_item_help_routine($menu_sel_text[$item],$menu_sel_action[$item]);
-	    &main'clear(); &main'refresh();
+	    &clear(); &refresh();
 	  }
 	} else {
 	  &$menu_generic_help_routine();	# Show generic help page
-	  &main'clear(); $xrow = $xcol = 0;
-	  &main'refresh(); 
+	  &clear(); $xrow = $xcol = 0;
+	  &refresh(); 
 	}
 	&menu_top_bot();	# Clear and re-display the current page
 	$last_menu_top_item = -1;
@@ -1281,19 +1402,19 @@ sub menu_display_internal {
       }
       elsif ($action eq "!") {					# Shell escape
 	if ($menu_shell_text ne "") {
-	  &main'clear(); $xrow = $xcol = 0;	# Clear screen
-	  &main'refresh();
-	  &main'nocbreak();	# ALWAYS turn off "cbreak" mode
-	  &main'echo();		# ALWAYS turn on "echo"
+	  &clear(); $xrow = $xcol = 0;	# Clear screen
+	  &refresh();
+	  &nocbreak();	# ALWAYS turn off "cbreak" mode
+	  &echo();		# ALWAYS turn on "echo"
 	  $xrow = $xcol = 0;
 	  &print_nl("Entering command shell via \"$menu_shell_text\".",1);
 	  &print_nl("Return here via shell exit (normally Control-D).",1);
-	  &main'refresh();
-	  &main'endwin();
+	  &refresh();
+	  &endwin();
 	  system($menu_shell_text);
-	  &main'cbreak();	# cbreak mode (each character available)
-	  &main'noecho();	# Menus are always "noecho"
-	  &main'clear(); $xrow = $xcol = 0;	# Clear screen
+	  &cbreak();	# cbreak mode (each character available)
+	  &noecho();	# Menus are always "noecho"
+	  &clear(); $xrow = $xcol = 0;	# Clear screen
 	  &menu_top_bot();	# Re-display the current page
 	  $last_menu_top_item = -1;
 	  &menu_page();
@@ -1302,14 +1423,14 @@ sub menu_display_internal {
       elsif (($action eq $cr) || ($action eq $nl) || 
 	     ($action eq "\n")) {				# RETURN
 	if ($number) { $item = $number - 1; }
-	else { $item = $menu_top_item + $arrow_line - $first_line; }
+	else { $item = $menu_top_item+($arrow_line-$first_line)*$items_per_line+$arrow_col; }
 	if (($item < $menu_top_item) || ($item > $menu_bot_item)) {
 	  &bell();
 	  $number = 0;
 	}
 	else {
-          if ($#_ > 1) { $_[2] = $arrow_line - $first_line; }
-          if ($#_ > 2) { $_[3] = $menu_top_item; }
+          $arrow_spec_row = $arrow_line - $first_line;
+	  $arrow_spec_col = $arrow_col;
 	  return($menu_sel_action[$item]);
 	}
       }
@@ -1318,12 +1439,18 @@ sub menu_display_internal {
 	if ($digit_val >= 0) {
 	  $number = $number * 10 + $digit_val;
 	  if ($number >= $menu_top_item + 1) { 
-	    if ($number <= $menu_bot_item + 1) {
-	      $arrow_line = $number - $menu_top_item + $first_line - 1;
+	    if (($number <= $menu_bot_item + 1) && ($number <= $total_items)) {
+	      if ($items_per_line > 1) {
+		$i = $number - $menu_top_item - 1;
+		$arrow_line = int($i/$items_per_line) + $first_line;
+		$arrow_col = $i % $items_per_line;
+	      } else {
+		$arrow_line = $number - $menu_top_item + $first_line - 1;
+	      }
 	    } else {
 	      &bell();
 	      $number = 0;
-	      $arrow_line = $first_line;
+	      $arrow_line = $first_line; $arrow_col = 0;
 	    }
 	    &menu_page();
 	  }
@@ -1355,10 +1482,19 @@ sub menu_display_internal {
 	} 
       }
 
-# Erase the last selection arrow
-      if ($menu_numbered) {
-	&main'move($last_arrow_line,$xpos);
-	&main'addstr("  ");
+# Reset last selection to normal rendition or clear last arrow
+      if ($highlight) {
+	$item = $menu_top_item+($last_arrow_line-$first_line)*$items_per_line+$last_arrow_col;
+	$i = $left_margin+$prepend_len+$last_arrow_col*($column_width);
+	if ($menu_type && !$item) { $i -= 4; } # No "[X] " on first item
+	&move($last_arrow_line,$i);
+	&addstr($menu_sel_text[$item]);
+	&move($last_arrow_line,$i);
+      } else {
+	if ($menu_numbered) {
+	  &move($last_arrow_line,$left_margin+$last_arrow_col*($column_width));
+	  &addstr("  ");
+	}
       }
     }
   }
@@ -1399,7 +1535,7 @@ sub collect_seq {
 
 seq_seek:
   while ($possible > 0) {
-    $ch = &main'wgetch($cwin);
+    $ch = &wgetch($cwin);
     if ($ch eq "") { &menu_hangup_proc(); }
     $collect = $collect.$ch;
     $i = 0;
@@ -1431,10 +1567,10 @@ sub menu_top_bot {
   local($i,$j,$temp);
 
 # Main top title
-  &main'move(0,$menu_top_title_col);
-  if ($menu_top_title_attr == 0) { &main'standout(); }
-  &main'addstr($menu_top_title);
-  if ($menu_top_title_attr == 0) { &main'standend(); }
+  &move(0,$menu_top_title_col);
+  if ($menu_top_title_attr == 0) { &standout(); }
+  &addstr($menu_top_title);
+  if ($menu_top_title_attr == 0) { &standend(); }
 
 # Top sub-titles
   if ($menu_sub_titler ne "") {
@@ -1450,10 +1586,10 @@ sub menu_top_bot {
   }
   if ($#menu_sub_title >= 0) {
     for ($i = 0; $i <= $#menu_sub_title; $i++) {
-      &main'move($i+1,$menu_sub_title_col[$i]);
-      if ($menu_sub_title_attr[$i] == 0) { &main'standout(); }
-      &main'addstr($menu_sub_title[$i]);
-      if ($menu_sub_title_attr[$i] == 0) { &main'standend(); }
+      &move($i+1,$menu_sub_title_col[$i]);
+      if ($menu_sub_title_attr[$i] == 0) { &standout(); }
+      &addstr($menu_sub_title[$i]);
+      if ($menu_sub_title_attr[$i] == 0) { &standend(); }
     }
   }
 
@@ -1472,24 +1608,24 @@ sub menu_top_bot {
   if ($#menu_bot_title >= 0) {
     $j = $main'LINES - $#menu_bot_title - 3;
     for ($i = 0; $i <= $#menu_bot_title; $i++) {
-      &main'move($j+$i,$menu_bot_title_col[$i]);
-      if ($menu_bot_title_attr[$i] == 0) { &main'standout(); }
-      &main'addstr($menu_bot_title[$i]);
-      if ($menu_bot_title_attr[$i] == 0) { &main'standend(); }
+      &move($j+$i,$menu_bot_title_col[$i]);
+      if ($menu_bot_title_attr[$i] == 0) { &standout(); }
+      &addstr($menu_bot_title[$i]);
+      if ($menu_bot_title_attr[$i] == 0) { &standend(); }
     }
   }
 
-  $items_per_screen = $last_line - $first_line + 1;
-  &main'move($main'LINES - 1,7);
-  &main'addstr($menu_prompt);
+  $items_per_screen = ($last_line - $first_line + 1) * $items_per_line;
+  &move($main'LINES - 1,7);
+  &addstr($menu_prompt);
 }
 
 #**********
 #  MENU_PAGE -- Display one page of menu selection items.
 #**********
 sub menu_page {
-  local($i) = 0;
-  local($curr_line,$line);
+  local($i,$j) = 0;
+  local($curr_line,$line,$fx,$iw);
   local($refresh_items) = 0;
 
 # Check for top item change (scrolling/paging of menu text).
@@ -1501,45 +1637,59 @@ sub menu_page {
 # Refresh all items on screen
   if ($refresh_items) {
     # Update percentage on bottom line
-    &main'move($main'LINES-1,0);
-    &main'standout();
-    if ($menu_single_page) { &main'addstr("(All) "); }
-    else { &main'addstr(sprintf("\(%3d%%\)",$percent)); }
-    &main'standend();
+    &move($main'LINES-1,0);
+    &standout();
+    if ($menu_single_page) { &addstr("(All) "); }
+    else { &addstr(sprintf("\(%3d%%\)",$percent)); }
+    &standend();
  
     # Display current page of menu
     $item = $menu_top_item;
     $menu_bot_item = $menu_top_item;
     $curr_line = $first_line;
     $max_sel_line = $first_line;
+    $max_sel_col = 0;
 
-    while ($curr_line <= $last_line) {
-      &main'move($curr_line,$xpos);
-      &main'clrtoeol();
+    while ($curr_line <= $last_line) { # Process lines on screen
+      &move($curr_line,$left_margin);
+      &clrtoeol();
       $line = "";
-      if ($item < $total_items) {
-	$sel_num = $item + 1;
-	if ($menu_numbered) { $line .= &menu_add_number($sel_num); }
-	if ($menu_type) {
-	  if ($sel_num != 1) {
-	    if ($menu_type == 1) {
-	      if ($menu_sel_action[$item] eq $radio_sel) { $line .= "[X] "; }
-	      else { $line .= "[ ] "; }
-	    } else { # menu_type is 2
-	      if ($selected_action[$item] > 0) { $line .= "[X] "; }
-	      elsif ($selected_action[$item] < 0) { $line .= "[-] "; }
-	      else { $line .= "[ ] "; }
+
+      if ($item < $total_items) { # If any items left to show ...
+	$curr_col = 1;
+        while ($curr_col <= $items_per_line) { # Add items to line
+	  if ($item < $total_items) {
+	    if ($menu_numbered) { $line .= &menu_add_number($item + 1); }
+	    if ($menu_type) { # Add selection boxes on mult/radio
+	      if ($item != 0) {
+	        if ($menu_type == 1) {
+		  if ($menu_sel_action[$item] eq $radio_sel) { $line .= "[X] "; }
+		  else { $line .= "[ ] "; }
+		} else { # menu_type is 2
+		  if ($selected_action[$item] > 0) { $line .= "[X] "; }
+		  elsif ($selected_action[$item] < 0) { $line .= "[-] "; }
+		  else { $line .= "[ ] "; }
+		}
+	      }
 	    }
+	    $line .= $menu_sel_text[$item]; # Add the selection text
+	    if ($items_per_line > 1) { # Pad out if multiple columns
+	      $i = 1; # Always pad one
+	      if ($menu_type && !$item) { $i += 4; } # Missing "[ ] "
+	      $line .= ' ' x ($max_item_len-length($menu_sel_text[$item])+$i);
+	    }
+	    $max_sel_col = $curr_col - 1;
+	    $item++;
 	  }
+	  $curr_col++;
 	}
-	$line .= $menu_sel_text[$item];
+
 	if (length($line) > $main'COLS - 1) { # Truncate lines that would wrap
 	  $line = substr($line,0,$main'COLS - 1);
 	}
-	&main'addstr($line);
+	&addstr($line);
 	$max_sel_line = $curr_line;
       }
-      $item++;
       $curr_line++;
     }
     $menu_bot_item = $item - 1;
@@ -1548,35 +1698,51 @@ sub menu_page {
   elsif ($menu_type) {
     $item = $menu_top_item;
     $curr_line = $first_line;
-    $i = $xpos + 1;
-    if ($menu_numbered) { $i += 8; }
     while ($curr_line <= $last_line) {
+      $i = $left_margin + $prepend_len - 3; # First "X" on line
       if ($item < $total_items) {
-	if ($item) {
-	  &main'move($curr_line,$i);
-	  if ($menu_type == 1) {
-	    if ($menu_sel_action[$item] eq $radio_sel) { &main'addstr("X"); }
-	    else { &main'addstr(" "); }
-	  } else { # menu_type is 2
-	    if ($selected_action[$item] > 0) { &main'addstr("X"); }
-	    elsif ($selected_action[$item] < 0) { &main'addstr("-"); }
-	    else { &main'addstr(" "); }
+	for ($j = 0; $j < $items_per_line; $j++) {
+	  if ($item) {
+	    &move($curr_line,$i);
+	    if ($menu_type == 1) {
+	      if ($menu_sel_action[$item] eq $radio_sel) { &addstr("X"); }
+	      else { &addstr(" "); }
+	    } else { # menu_type is 2
+	      if ($selected_action[$item] > 0) { &addstr("X"); }
+	      elsif ($selected_action[$item] < 0) { &addstr("-"); }
+	      else { &addstr(" "); }
+	    }
 	  }
+	  $i += $column_width;	# Next "X" on line
+	  $item++;		# Next item
 	}
       }
-      $item++;
-      $curr_line++;
+      $curr_line++;		# Next line
     }
   }
  
-# Position the selection arrow on the screen (if numbered menu)
+# Sanity checks for arrow
   if ($arrow_line < $first_line) { $arrow_line = $first_line; }
   if ($arrow_line > $max_sel_line) { $arrow_line = $max_sel_line; }
-  &main'move($arrow_line,$xpos);
-  if ($menu_numbered) { &main'addstr("->"); }
+
+# Highlight selection text or add selection arrow (based on prefs).
+# Position the cursor properly on the screen.
+  if ($highlight) {
+    $item = $menu_top_item+($arrow_line-$first_line)*$items_per_line+$arrow_col;
+    $i = $left_margin+$prepend_len+$arrow_col*($column_width);
+    if ($menu_type && $item == 0) { $i -= 4; } # No "[X] " on first item
+    &move($arrow_line,$i);
+    &standout();
+    &addstr($menu_sel_text[$item]);
+    &standend();
+    &move($arrow_line,$i);
+  } else {
+    &move($arrow_line,$left_margin+$arrow_col*$column_width);
+    if ($menu_numbered) { &addstr("->"); }
+  }
 
 # Write out current menu page
-  &main'refresh();
+  &refresh();
 }
 
 #**********
@@ -1584,8 +1750,9 @@ sub menu_page {
 #**********
 sub menu_add_number {
   local($sel_num) = @_;
-  local($sel_str) = "  ";
+  local($sel_str) = "";
 
+  if (!$highlight) { $sel_str = "  "; }		# Place for "->"
   if ($sel_num < 1000) { $sel_str .= " "; }
   if ($sel_num < 100) { $sel_str .= " "; }
   if ($sel_num < 10) { $sel_str .= " "; }
@@ -1597,11 +1764,11 @@ sub menu_add_number {
 # MENU_RETURN_PREP -- Common return functions.
 #**********
 sub menu_return_prep {
-  &main'nocbreak();
-  &main'echo(); 
-  &main'clear();  $xrow = $xcol = 0;
-  &main'refresh(); 
-  if (!$curses_application) { &main'endwin(); }
+  &nocbreak();
+  &echo(); 
+  &clear();  $xrow = $xcol = 0;
+  &refresh(); 
+  if (!$curses_application) { &endwin(); }
 }
 
 #**********
@@ -1616,33 +1783,43 @@ sub menu_hangup_proc {
 # MENU_DEFAULT_SHOW_HELP
 #*********
 sub menu_default_show_help {
-  &main'clear(); $xrow = $xcol = 0;
+  local($arrow_txt);
+
+  &clear(); $xrow = $xcol = 0;
   &print_nl("--------------------------------",1);
-  &print_nl("Menu Help (PerlMenu version 3.3)",1);
+  &print_nl("Menu Help (PerlMenu version 4.0)",1);
   &print_nl("--------------------------------",2);
+  if ($items_per_line > 1) { $arrow_txt = "up/down/left/right"; }
+  else { $arrow_txt = "up/down"; }
+  if ($highlight) {
+    &print_nl("- Use $arrow_txt arrow keys to highlight your selection.",1);
+  } else {
+    &print_nl("- Use $arrow_txt arrows to place \"->\" in front of your selection.",1);
+  }
   if ($menu_type == 1) {
-    &print_nl("- Use up/down arrows to place \"->\" in front of your selection.",1);
-    &print_nl("- Press Return (or Enter) to chose that selection.",1);
+    &print_nl("- Press Return (or Enter) to choose that selection.",1);
     &print_nl("- Select the first item when ready to continue.",2);
   }
   elsif ($menu_type == 2) {
-    &print_nl("- Use up/down arrows to place \"->\" in front of your selection.",1);
     &print_nl("- Press Return (or Enter) to toggle the selection on/off.",1);
     &print_nl("- Select the first item when ready to continue.",2);
   } else {
-    &print_nl("- Use up/down arrows to place \"->\" in front of your selection.",1);
     &print_nl("- Press Return (or Enter) when ready to continue.",2);
   }
   &print_nl("Available action-keys:",1);
   &print_nl("h - Show this help screen.",1);
   if ($menu_item_help_routine ne "") {
-    &print_nl("? - Show help on the item with the \"->\" in front.",1);
+    if ($highlight) {
+      &print_nl("? - Show help on the item with the \"->\" in front.",1);
+    } else {
+      &print_nl("? - Show help on the highlighted item.",1);
+    }
   }
   if (!$disable_quit) {
     &print_nl("q - Quit entirely.",1);
   }
   &print_nl("u - Return to the previous menu or function.",1);
-  if (($menu_top_activated) && (! $menu_is_top_one)) {
+  if ($menu_top_activated && !$menu_is_top_one) {
     &print_nl("t - Return to the top menu.",1);
   }
   if ($menu_type == 2) {
@@ -1661,20 +1838,20 @@ sub menu_default_show_help {
     &print_nl("! = Enter command shell via \"$menu_shell_text\".",1);
   }
   &print_nl(" ",1);
-  &main'addstr("[Press any key to continue]");
-  &main'refresh();
-  $ch = &main'getch();
+  &addstr("[Press any key to continue]");
+  &refresh();
+  $ch = &getch();
   if ($ch eq "") { &menu_hangup_proc(); }
-  &main'clear(); $xrow = $xcol = 0;
-  &main'refresh();
+  &clear(); $xrow = $xcol = 0;
+  &refresh();
 }
 
 sub print_nl {
   local($text,$skip) = @_;
 
-  &main'addstr($text);
+  &addstr($text);
   if ($skip) { &nl($skip); }
-  &main'refresh();
+  &refresh();
 }
 
 sub nl {
@@ -1682,10 +1859,10 @@ sub nl {
   $xrow += $skip;
   $xcol = 0;
   if ($xrow > $main'LINES - 1) {
-    &main'clear(); $xrow = 0; $xcol = 0;
-    &main'refresh();
+    &clear(); $xrow = 0; $xcol = 0;
+    &refresh();
   }
-  &main'move($xrow,$xcol);
+  &move($xrow,$xcol);
 }
 
 sub defbell {
@@ -1707,7 +1884,7 @@ sub defbell {
 #
 # Returns:   Nothing
 #*********
-sub main'menu_template_setexit { @template_exitkeys = @_; }
+sub menu_template_setexit { @template_exitkeys = @_; }
 
 #**********
 # MENU_LOAD_TEMPLATE
@@ -1718,7 +1895,7 @@ sub main'menu_template_setexit { @template_exitkeys = @_; }
 #
 # Returns:   0=Success, 1=Cannot open file
 #**********
-sub main'menu_load_template {
+sub menu_load_template {
   local($filename) = @_;
 
   &menu_load_template_init_internal;
@@ -1741,7 +1918,7 @@ sub main'menu_load_template {
 #
 # Returns:   0=Success
 #**********
-sub main'menu_load_template_array {
+sub menu_load_template_array {
   &menu_load_template_init_internal;
   for (@_) {
     &menu_load_template_internal($_);
@@ -1761,7 +1938,7 @@ sub menu_load_template_init_internal {
   @menu_template_len = @menu_template_type = ();
   @req_mark_row = @req_lmark_col = @req_rmark_col = ();
 
-  &main'menu_overlay_clear(1);
+  &menu_overlay_clear(1);
 }
 
 
@@ -1813,19 +1990,19 @@ sub menu_load_template_internal {
 #
 # Returns:   Nothing
 #**********
-sub main'menu_overlay_clear {
+sub menu_overlay_clear {
   local($clear_sticky) = @_;
   local($i);
 
 # Clear current menu overlays
   for ($i = 0; $i <= $#menu_overlay_text; $i++) {
-    next if (($menu_overlay_stick[$i]) && (!$clear_sticky));
+    next if ($menu_overlay_stick[$i] && !$clear_sticky);
 
     # Blank out any overlay on the screen (if within user exit routine)
     if ($template_exit_active) {
       $menu_overlay_text[$i] =~ tr/ / /c;	# Non-blanks to blanks
-      &main'move($menu_overlay_row[$i],$menu_overlay_col[$i]);
-      &main'addstr($menu_overlay_text[$i]);
+      &move($menu_overlay_row[$i],$menu_overlay_col[$i]);
+      &addstr($menu_overlay_text[$i]);
     }
 
     # Reset this entry
@@ -1847,7 +2024,7 @@ sub main'menu_overlay_clear {
 #
 # Returns:   0=Success (w/loaded array), 1=No template loaded or invalid parms
 #**********
-sub main'menu_overlay_template {
+sub menu_overlay_template {
   local($over_row,$over_col,$over_text,$over_rend,$over_stick) = @_;
   local($i) = $#menu_overlay_text;
 
@@ -1882,7 +2059,7 @@ sub main'menu_overlay_template {
 #
 # Returns:   0=Success (w/loaded array), 1=No template loaded
 #**********
-sub main'menu_display_template {
+sub menu_display_template {
   local(*menu_template_data,*field_defaults,*protected,
 	$template_exit_rtn,*required) = @_;
   local($i,$j,$unprot_cnt,$noshow,$numeric,$str,$done,$direction,$last_field);
@@ -1913,7 +2090,7 @@ sub main'menu_display_template {
     $exit_seq[5] = $redraw_screen;	# Redraw screen
     $exit_seq[6] = $next_field;         # Emacs-style editing
     $exit_seq[7] = $prev_field;         # Emacs-style editing
-    &main'menu_setexit(@exit_seq,@template_exitkeys);
+    &menu_setexit(@exit_seq,@template_exitkeys);
 
     # Input data from all data windows until "Return exit"
     $exit = $exit_seq[0]; # To tab over first protected fields
@@ -1930,14 +2107,14 @@ sub main'menu_display_template {
 
       # Get data from current window (handling redraw as necessary)
       do {
-	$menu_template_data[$i] = &main'menu_getstr(0,0,"",0,
+	$menu_template_data[$i] = &menu_getstr(0,0,"",0,
 				$menu_template_data[$i],
 				$menu_template_len[$i],
 				$noshow,$numeric,
 				$data_win[$i],
 				$data_win_cpos[$i]);
 	$data_win_cpos[$i] = $last_window_cpos;
-	$exit = &main'menu_getexit();
+	$exit = &menu_getexit();
 
 	if ($exit eq $exit_seq[5]) {
 	  &display_template_internal(1);
@@ -1976,7 +2153,7 @@ sub main'menu_display_template {
       if ($req_field_cnt) {
 	$req_first = -1;
 	for ($j = 0; $j < $field; $j++) {
-	  if (($required[$j]) && (!$protected[$j]) &&
+	  if ($required[$j] && !$protected[$j] &&
 	      ($menu_template_data[$j] eq "")) {
 	    $still_req_cnt++;
 	    if ($req_first < 0) { $req_first = $j; }
@@ -1999,21 +2176,21 @@ sub main'menu_display_template {
 	# Place any overlays on the screen
 	if ($#menu_overlay_text >= 0) {
 	  for ($j = 0; $j <= $#menu_overlay_text; $j++) {
-	    &main'move($menu_overlay_row[$j],$menu_overlay_col[$j]);
-	    if ($menu_overlay_rend[$j]) { &main'standout(); }
-	    &main'addstr($menu_overlay_text[$j]);
-	    if ($menu_overlay_rend[$j]) { &main'standend(); }
+	    &move($menu_overlay_row[$j],$menu_overlay_col[$j]);
+	    if ($menu_overlay_rend[$j]) { &standout(); }
+	    &addstr($menu_overlay_text[$j]);
+	    if ($menu_overlay_rend[$j]) { &standend(); }
 	  }
 	  $do_refresh = 1;
 	}
       }
 
       # Place required field markers on the screen
-      if (($req_field_cnt) && ($direction == 0)) {
+      if ($req_field_cnt && ($direction == 0)) {
 	$do_refresh = &mark_req_fields(1);
       }
 
-      if ($do_refresh) { &main'refresh(); }
+      if ($do_refresh) { &refresh(); }
 
       # If done, make sure all required fields supplied, then finish up.
       if ($done) {
@@ -2028,21 +2205,21 @@ sub main'menu_display_template {
 
 # No unprotected fields - display screen until keypress
   } else {
-    &main'move(0,0);	# Put cursor in upper-left corner
-    &main'refresh();
-    &main'getch();
+    &move(0,0);	# Put cursor in upper-left corner
+    &refresh();
+    &getch();
   }
 
 # Delete data windows for all fields
-  for ($i = 0; $i < $field; $i++) { &main'delwin($data_win[$i]); }
+  for ($i = 0; $i < $field; $i++) { &delwin($data_win[$i]); }
 
 # Reset exit sequences
   @exit_seq = ();
-  &main'menu_setexit(@exit_seq);
+  &menu_setexit(@exit_seq);
 
 # Clear screen
-  &main'clear();
-  &main'refresh();
+  &clear();
+  &refresh();
   return(0);
 }
 
@@ -2062,10 +2239,10 @@ sub display_template_internal {
   local($i,$j);
 
 # Clear the screen and paint the template
-  &main'clear();
+  &clear();
   for ($i = 0; $i <= $#menu_template_line; $i++) {
-    &main'move($i,0);
-    &main'addstr($menu_template_line[$i]);
+    &move($i,0);
+    &addstr($menu_template_line[$i]);
   }
 
 # Prepare data windows for all fields
@@ -2074,20 +2251,20 @@ sub display_template_internal {
 
     # Create a data window
     if (!$refresh) {
-      $data_win[$i] = &main'subwin($window,1,$menu_template_len[$i],
+      $data_win[$i] = &subwin($window,1,$menu_template_len[$i],
 			$menu_template_row[$i],$menu_template_col[$i]);
     }
 
     if ($refresh) {
-      &main'wmove($data_win[$i],0,0);
+      &wmove($data_win[$i],0,0);
       if ($menu_template_type[$i] == 2) { # Hidden data - hide the default
 	$str = "";
 	for ($j = 0; $j < length($menu_template_data[$i]); $j++) { $str .= "*"; }
-	&main'waddstr($data_win[$i],$str);
+	&waddstr($data_win[$i],$str);
       } else {
-	&main'waddstr($data_win[$i],$menu_template_data[$i]);
+	&waddstr($data_win[$i],$menu_template_data[$i]);
       }
-      &main'wrefresh($data_win[$i]);
+      &wrefresh($data_win[$i]);
     } else {
       # Place default in field (if there is one)
       if ($field_defaults[$i] ne "") {
@@ -2096,15 +2273,15 @@ sub display_template_internal {
 				     $menu_template_len[$i]);
 	}
 	$menu_template_data[$i] = $field_defaults[$i];
-	&main'wmove($data_win[$i],0,0);
+	&wmove($data_win[$i],0,0);
 	if ($menu_template_type[$i] == 2) { # Hidden data - hide the default
 	  $str = "";
 	  for ($j = 0; $j < length($field_defaults[$i]); $j++) { $str .= "*"; }
-	  &main'waddstr($data_win[$i],$str);
+	  &waddstr($data_win[$i],$str);
 	} else {
-	  &main'waddstr($data_win[$i],$field_defaults[$i]);
+	  &waddstr($data_win[$i],$field_defaults[$i]);
 	}
-	&main'wrefresh($data_win[$i]);
+	&wrefresh($data_win[$i]);
       } else { $menu_template_data[$i] = ""; }
     }
 
@@ -2133,17 +2310,17 @@ sub display_template_internal {
 # Place any overlays on the screen
   if ($#menu_overlay_text >= 0) {
     for ($i = 0; $i <= $#menu_overlay_text; $i++) {
-      &main'move($menu_overlay_row[$i],$menu_overlay_col[$i]);
-      if ($menu_overlay_rend[$i]) { &main'standout(); }
-      &main'addstr($menu_overlay_text[$i]);
-      if ($menu_overlay_rend[$i]) { &main'standend(); }
+      &move($menu_overlay_row[$i],$menu_overlay_col[$i]);
+      if ($menu_overlay_rend[$i]) { &standout(); }
+      &addstr($menu_overlay_text[$i]);
+      if ($menu_overlay_rend[$i]) { &standend(); }
     }
   }
 
 # Place required field markers on the screen
   &mark_req_fields($refresh);
 
-  &main'refresh();
+  &refresh();
 }
 
 #**********
@@ -2162,24 +2339,24 @@ sub mark_req_fields {
   for ($j = 0; $j < $field; $j++) {
     if ($required[$j]) {
       if ($req_lmark_set ne "") {
-	&main'move($req_mark_row[$j],$req_lmark_col[$j]);
+	&move($req_mark_row[$j],$req_lmark_col[$j]);
 	if (($menu_template_data[$j] eq "") || !$refresh_flag) {
-	  if ($req_lmark_attr) { &main'standout(); }
-	  &main'addstr($req_lmark_set);
-	  if ($req_lmark_attr) { &main'standend(); }
+	  if ($req_lmark_attr) { &standout(); }
+	  &addstr($req_lmark_set);
+	  if ($req_lmark_attr) { &standend(); }
 	} else {
-	  &main'addstr($req_lmark_clear);
+	  &addstr($req_lmark_clear);
 	}
 	$rc = 1;
       }
       if ($req_rmark_set ne "") {
-	&main'move($req_mark_row[$j],$req_rmark_col[$j]);
+	&move($req_mark_row[$j],$req_rmark_col[$j]);
 	if (($menu_template_data[$j] eq "") || !$refresh_flag) {
-	  if ($req_rmark_attr) { &main'standout(); }
-	  &main'addstr($req_rmark_set);
-	  if ($req_rmark_attr) { &main'standend(); }
+	  if ($req_rmark_attr) { &standout(); }
+	  &addstr($req_rmark_set);
+	  if ($req_rmark_attr) { &standend(); }
 	} else {
-	  &main'addstr($req_rmark_clear);
+	  &addstr($req_rmark_clear);
 	}
 	$rc = 1;
       }

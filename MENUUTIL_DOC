@@ -1,7 +1,7 @@
                                  menuutil.pl
                          Perl Menu Support Utilities
                                  Version 1.1
-                              February 19, 1996
+                              February 17, 1997
 
                                Steven L. Kunz
                            Networked Applications
@@ -13,32 +13,38 @@
 Overview
 --------
 
-  After writing several curseperl programs which used menu.pl I learned there
-  was often a set of utility routines that I used in each program.  I
+  After writing several Perl+Curses programs which used PerlMenus I learned
+  there was often a set of utility routines that I used in each program.  I
   eventually collected these in a module ("menuutil.pl") which I included in
   each source.  These routines provide titles, text display, and prompting -
-  all the while maintaining global row and column positions. 
+  all the while maintaining global row and column positions.  
 
-  These routines are probably best understood by studying the "demo_util"
+  These routines are probably best understood by studying the "demo_util" 
   program supplied in this distribution.  In any case, some routines rely on
-  standard "menu.pl" routines (menu_getstr, specifically) so you add 'require
-  "menuutil.pl";' to existing PerlMenu programs.
+  standard "perlmenu.pm" routines (menu_getstr, specifically) so you add
+  'require "menuutil.pl";' to existing PerlMenu programs. 
 
 
 --------------------------
 Official Distribution Site
 --------------------------
 
+  The PerlMenu package is distributed via "CPAN" (the "Comprehensive Perl
+  Archive Network").  Pick a CPAN site near you with a WWW browser pointed
+  at "http://www.perl.com/perl/CPAN/CPAN.html" and go into the
+  "authors/Steven L Kunz" folder.  You should find "perlmenu.v4.0.tar.Z" in
+  there.  
+
   The author's official distribution is available via anonymous FTP from:
 
-    ftp://ftp.iastate.edu/pub/perl/perlmenu.v3.3.tar.Z
+    ftp://ftp.iastate.edu/pub/perl/perlmenu.v4.0.tar.Z
 
   Other sites on the net may offer this package.  New releases are announced
   in the Usenet Newsgroup "comp.lang.perl.announce".
 
   PerlMenu also has an official WWW page at:
 
-    http://www.cc.iastate.edu/perlmenu/
+    http://www.cc.iastate.edu/perlmenu/homepage.html
 
 
 ---------------------------
@@ -64,17 +70,17 @@ Required setup in your code
   program coding).  If you issue the curses "initscr" call yourself, the
   front of your program should have the following statements:
 
-    require "menu.pl";                 # PerlMenu package (main routines)
+    use perlmenu;                      # PerlMenu package (main routines)
     require "menuutil.pl";             # PerlMenu package (utility routines)
     [...]
     $row = $col = 0;                   # Init row and col variables
     $window = &initscr();              # Get main screen window value
-    &menu_curses_application($window); # Tell menu.pl what we are using
+    &menu_curses_application($window); # Tell PerlMenu what we are using
 
-  If you use the return value from "menu_init" (letting menu.pl do the
+  If you use the return value from "menu_init" (letting perlmenu.pm do the
   "initscr" for you), the following is correct:
 
-    require "menu.pl";                 # PerlMenu package (main routines)
+    use perlmenu;                      # PerlMenu package (main routines)
     require "menuutil.pl";             # PerlMenu package (utility routines)
     [...]
     $row = $col = 0;                   # Init row and col variables
@@ -252,7 +258,7 @@ For the record
 --------------
 
 PerlMenu - Perl library module for curses-based menus & data-entry templates
-Copyright (C) 1992-96  Iowa State University Computation Center             
+Copyright (C) 1992-97  Iowa State University Computation Center             
 
    This Perl library module is free software; you can redistribute it
    and/or modify it under the terms of the GNU Library General Public

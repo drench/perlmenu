@@ -1,7 +1,7 @@
-                                   menu.pl
+                                 perlmenu.pm
                                  Perl Menus
-                                 Version 3.3
-                              February 19, 1996
+                                 Version 4.0
+                              February 17, 1997
 
                                Steven L. Kunz
                            Networked Applications
@@ -13,17 +13,17 @@
 Overview
 --------
 
-  The "menu.pl" package is a perl package (built into your perl program with
-  a "require menu.pl" command) that automates curses-based full screen menus
-  and data entry.
+  The "perlmenu.pm" package is a Perl5 package (built into your Perl program
+  with a "use perlmenu.pm" command) that automates curses-based full screen
+  menus and data entry.  It also functions under Perl4/curseperl.
 
   Using three simple calls, any number of items may be selected from a
   single or multiple-page menu by moving an arrow to the desired item (or
   directly entering the selection number displayed on the screen).  In
-  addition to simple "single one-shot selection menus", "radio button"  style
+  addition to simple "single one-shot selection menus", "radio button" style
   menus and "multiple-item-selection" menus are provided.  Paging through
-  multiple-page menus is handled automatically.  Menu titles, sub-titles and
-  prompts are supported.  
+  multiple-page menus is handled automatically.  Menu titles, sub-titles,
+  prompts, "single column", and "multiple column" menus are supported.
 
   Using two simple calls a full-screen data entry template may be loaded
   and a fully-titled data entry input screen may be created.  Defaults,
@@ -31,8 +31,11 @@ Overview
 
   ---
 
-  The "menu.pl" package uses curses interface routine calls supplied by the
-  "curseperl" package (for Perl4) or the Curses extension (for Perl5).  
+  The "perlmenu.pm" package uses curses interface routine calls supplied by
+  the Curses extension for Perl5.  A "menu.pl" package can be created which
+  uses curses interface routine calls supplied by the "curseperl" package
+  for Perl4.  All functions and features are identical whether you are using
+  Perl4 or Perl5.
 
   The "curseperl" package is distributed with the normal perl4 distribution in
   the "usub" directory.  The "curseperl" binary is a complete perl interpreter
@@ -42,11 +45,14 @@ Overview
   of "perl".  
 
   The "Curses" extension for Perl5 is maintained by William Setzer (of North
-  Carolina State University).  This package is available via anonymous FTP at: 
+  Carolina State University).  This package is available from any "CPAN"
+  ("Comprehensive Perl Archive Network") site.  Point your WWW browser to: 
 
-    ftp://ftp.ncsu.edu/pub/math/wsetzer/Curses-a8.tar.gz
+       http://www.perl.com/perl/CPAN/CPAN.html
 
-  When writing perl5/Curses programs make sure you include the following two
+  and look for "Curses" in the "User Interfaces" section.
+
+  When writing Perl5/Curses programs make sure you include the following two
   lines at the start of your program (to initialize the Curses environment
   correctly): 
 
@@ -62,6 +68,7 @@ Overview
      #!/usr/local/bin/perl5
      BEGIN { $Curses::OldCurses = 1; }
      use Curses;
+     use perlmenu;
      ...
      &menu_init(1,"Select an Animal"); # Init menu
 
@@ -102,6 +109,11 @@ Overview
   proper programming of the application) to go directly to the "top" (first)
   menu and to remember the selection position in a previous menu. 
 
+  Many preferences can be set via a "menu_prefs" routine call to control
+  the style of the selection cursor, the arrow-wrap and scrolling actions,
+  single or multiple column menus, and various prompts, defaults, and
+  other features.
+
   ---
 
   For full-screen data entry, most applications using will use the following
@@ -110,6 +122,7 @@ Overview
      #!/usr/local/bin/perl5
      BEGIN { $Curses::OldCurses = 1; }
      use Curses;
+     use perlmenu;
      ...
      @input_data = (); # Define a place to put the input data
      ...
@@ -154,23 +167,29 @@ Overview
 Official Distribution Site
 --------------------------
 
+  The PerlMenu package is distributed via "CPAN" (the "Comprehensive Perl
+  Archive Network").  Pick a CPAN site near you with a WWW browser pointed
+  at "http://www.perl.com/perl/CPAN/CPAN.html" and go into the
+  "authors/Steven L Kunz" folder.  You should find "perlmenu.v4.0.tar.Z" in
+  there.  
+
   The author's official distribution is available via anonymous FTP from:
 
-    ftp://ftp.iastate.edu/pub/perl/perlmenu.v3.3.tar.Z
+    ftp://ftp.iastate.edu/pub/perl/perlmenu.v4.0.tar.Z
 
   Other sites on the net may offer this package.  New releases are announced
   in the Usenet Newsgroup "comp.lang.perl.announce".
 
   PerlMenu also has an official WWW page at:
 
-    http://www.cc.iastate.edu/perlmenu/
+    http://www.cc.iastate.edu/perlmenu/homepage.html
 
 
 -------------------------
 Solicitation for Comments
 -------------------------
 
-  If you like "menu.pl" (and "menuutil.pl" and have put it to a useful
+  If you like "perlmenu.pm" (and "menuutil.pl") and have put it to a useful
   purpose, I would appreciate a few lines indicating where you are and what
   you are using it for.  Likewise, if you have found a bug, documentation
   problem, or would really like to see a certain feature, feel free to let
@@ -187,7 +206,7 @@ Card of Thanks
 --------------
 
   A big "thank you" to the following people who have taken time to notice
-  some improvements that could be made in the menu.pl code and mail them
+  some improvements that could be made in the PerlMenu code and mail them
   to me.  Specifically:
 
   - Greg Kresko (National Research Council Canada)
@@ -231,11 +250,20 @@ Card of Thanks
     data input facility.  The "menu_display_template" user exit routines
     were developed with his feedback relating to an actual application.
 
-  - Charles F. Randall (once with Iowa State University, ISUCC User Services,
-    now with Des Moines Area Community College).
+  - Charles F. Randall (once with Iowa State University, ISUCC User Services)
     Charles ("Randy") supplied the code for the "emacs-similar" cursor
     movement/cut-paste control sequences to menu_getstr and
     menu_display_template.
+
+  Last (but not least) a special "Thank you" to William Setzer of North
+  Carolina State University, author of the Perl5 "Curses" extension. 
+  William has been very supportive in many ways in relation to my PerlMenu
+  package on "Perl5".  He has quickly answered my questions, provided pieces
+  of code and suggestions, and even made mods to his package in support of
+  mine.  William has also taken the time to "beta-test"  pre-release
+  versions of the PerlMenu package to make sure "all is well"  with his
+  current release.  Cooperation such as this has been key to making things
+  work smoothly using PerlMenus and the "Curses" extension under Perl5. 
 
 
 -------------------------------------
@@ -414,13 +442,18 @@ Simple display/selection from a menu - "menu_display"
 
   Routine:      menu_display
 
-  Syntax:       $sel_var = &menu_display("Prompt text",$arrow_loc,$top_item);
+  Syntax:       $sel_var = &menu_display("Prompt text",$arrow_loc_row,
+                                         $top_item,$arrow_loc_col);
 
   Input args:   - Prompt text (string for bottom line).
                   Optional, defaults appropriate for menu.
-                - Item line on screen to place the arrow.
+                - Item row on screen to place the arrow.
                   Optional, defaults to zero (the first item).
                 - Index of item to place at top of screen.
+                  Optional, defaults to zero (the first item).
+                - Item column on screen to place the arrow.
+                  Applies to "multiple-column" menus only (ignored on
+                  single column menus).
                   Optional, defaults to zero (the first item).
 
   Returns:      "<action-text>" or "%UP%" or "%EMPTY%"
@@ -627,7 +660,7 @@ Displaying/selecting from a multiple selection menu - "menu_display_mult"
   automatically UNLESS the FIRST "menu_init" call is also a "top menu_init"
   call (indicating the software was programmed with "top" menus in mind). 
 
-  The "demotop" program distributed with this release of "menu.pl" provides
+  The "demotop" program distributed with this release of PerlMenus provides
   an example of correct usage of the "top menu" features.   
 
 
@@ -635,44 +668,112 @@ Displaying/selecting from a multiple selection menu - "menu_display_mult"
 "Latched" Menus
 --------------------
 
-"Latched" menu support offers the ability to remember where you were in a
-menu when it is re-displayed later.  This is often useful in traversing
-a menu-tree down and then returning to previous menus (and selection
-locations) when "popping back up" the tree (with the "up" hot-key).  The
-only action necessary to remember position is the addition to two parameters
-on the "menu_display" call as follows:
+  "Latched" menu support offers the ability to remember where you were in a
+  menu when it is re-displayed later.  This is often useful in traversing a
+  menu-tree down and then returning to previous menus (and selection
+  locations) when "popping back up" the tree (with the "up" hot-key).  The
+  only action necessary to remember position is the addition of three
+  parameters on the "menu_display" call as follows:  
 
-     $sel_var = &menu_display("Prompt text",$arrow_loc_var,$top_item_var);
+     $sel_var = &menu_display("Prompt text",$arrow_loc_row_var,
+                              $top_item_var,$arrow_loc_col_var);
 
-These two values indicate the location of the arrow line on the menu screen
-and the index number of the top "menu_item" on the menu screen.  If you want
-the first item the first time, these values should both be initialized to
-zero (first item on the first page).  This will generate the same action as
-if they were not specified - the default "non-latched" call.  These two
-optional parameters also are used to RETURN the value of the top item on
-a menu-page and arrow location AFTER the user selected something (and the
-"menu_display" routine returns).  If you do not modify the two parameters,
-rebuild the menu the same way, and call "menu_display" supplying the returned
-values, the menu will be displayed in the original "selection" location.
+  These three values indicate the row location of the arrow line on the menu
+  screen, the index number of the top "menu_item" on the menu screen, and
+  the column location of the arrow line on the menu screen (item-column, not
+  character position column).  If you want the first item the first time,
+  all these values should be initialized to zero (first item on the first
+  page).  This will generate the same action as if they were not specified -
+  the default "non-latched" call.  These optional parameters also are
+  used to RETURN the value of the top item on a menu-page and arrow location
+  AFTER the user selected something (and the "menu_display" routine
+  returns).  If you do not modify the three parameters, rebuild the menu the
+  same way, and call "menu_display" supplying the returned values, the menu
+  will be displayed in the original "selection" location.  
 
-By letting "menu_display" store selection locations before moving to a lower
-level in your "menu-tree" (via a subroutine call to another menu-generator),
-a return from the lower level can regenerate any given levels menu and
-reposition the selection location automatically.  Make sure you store your
-"latch" variables in "local" storage (one set for each menu-generator
-routine that has a "menu_display" call).
+  By letting "menu_display" store selection locations before moving to a lower
+  level in your "menu-tree" (via a subroutine call to another menu-generator),
+  a return from the lower level can regenerate any given levels menu and
+  reposition the selection location automatically.  Make sure you store your
+  "latch" variables in "local" storage (one set for each menu-generator
+  routine that has a "menu_display" call).
 
-One final note - the "menu_display" routine will check and automatically
-adjust the values to meet current menu limits.  For example, if your menus
-are "dynamic" and items "disappeared" (making your last latch position off
-the end of the reconstructed menu), the "menu_display" routine will adjust
-to point to the the last item in the menu (adjusting the "top item" as
-needed). 
+  One final note - the "menu_display" routine will check and automatically
+  adjust the values to meet current menu limits.  For example, if your menus
+  are "dynamic" and items "disappeared" (making your last latch position off
+  the end of the reconstructed menu), the "menu_display" routine will adjust
+  to point to the the last item in the menu (adjusting the "top item" as
+  needed). 
  
 
--------------------------------------
-Other Menu-Related "menu.pl" Routines
--------------------------------------
+--------------------------------
+Setting Overall Menu Preferences
+--------------------------------
+
+  A "menu preference setting routine" can be called at any time in your
+  program to change how the menus are formatted and provide some control on
+  what the user may do.  This routine, "menu_prefs", has several positional
+  parameters that let you control: 
+
+    - Justification (Left-justified or centered-on-the-screen menus)
+    - Scrolling (line-by-line or page scrolling)
+    - Whether the user may "quit" without selecting anything
+    - What the "quit" prompt will be
+    - What the default response is they see the "quit" prompt
+    - The number of columns (Single-column or multiple-column selections)
+    - The style of the selection cursor ("arrowed" or "highlighted" text)
+
+  Refer to the "menu_prefs" routine in the next section for complete
+  details.
+
+  As an example, let us examine changing the number of columns used to display
+  the selection text.  Sometimes you may find you have a lot of items with
+  small "selection text" strings to choose from.  Examples would be
+  two-character state codes for the United States, zip-code selection, etc. 
+  Rather than have these items "one per line" (the default action) and having
+  the user scroll through several pages to make selection, it would be best
+  to place as many on a page as possible.  A call to "menu_prefs" is all that
+  is needed, changing the "multiple column" preference.  One example would be:  
+
+    &menu_prefs(0,0,0,"","",1,0);
+
+  The second-to-last parameter ("1") is the one that indicates "do multiple
+  column menus from now on".  Nothing needs to be changed at all in any
+  portion of your program that originally built and displayed the menu. 
+  Setting the multiple column preference will cause the menu routines to
+  automatically scale the size of the columns based on the size of the
+  LONGEST selection text.  As many items as possible will be packed on each
+  line without truncation.  As a result, a menu that looked like this:  
+
+                          Long Menu (fits on several pages)
+
+  ->   1) (Exit)
+       2) Item 2
+       3) Item 3
+       4) Item 4
+       5) Item 5
+       [...]
+
+  suddenly looks like this with only a "menu_pref" call change in your
+  program: 
+
+                          Long Menu (fits on several pages)
+
+  ->   1) (Exit)      2) Item 2      3) Item 3      4) Item 4      5) Item 5
+       6) Item 6      7) Item 7      8) Item 8      9) Item 9     10) Item 10
+      11) Item 11    12) Item 12    13) Item 13    14) Item 14    15) Item 15
+      16) Item 16    17) Item 17    18) Item 18    19) Item 19    20) Item 20
+      21) Item 21    22) Item 22    23) Item 23    24) Item 24    25) Item 25
+      [...]
+
+  Of course you can change the preferences to different values before and
+  after each menu you construct (if you want to mix single and multiple column
+  menus in one application). 
+
+
+-----------------------------------------
+Other Menu-Related "perlmenu.pm" Routines
+-----------------------------------------
 
   --------
   Routine:      menu_curses_application
@@ -684,33 +785,33 @@ Other Menu-Related "menu.pl" Routines
   Returns:      Main window value.
 
   COMPATIBILITY NOTE:
-  Prior to version 3.0 of menu.pl this routine did not require the passing
+  Prior to version 3.0 of PerlMenus this routine did not require the passing
   of the window value returned from your call to "initscr".  As of version
-  3.0 you SHOULD provide the window value.  If menu.pl has not gotten the
-  value of the main window itself, it must be told what you are using.
+  3.0 you SHOULD provide the window value.  If perlmenu.pm has not gotten
+  the value of the main window itself, it must be told what you are using. 
   If you do not pass the "initscr_window" value, this routine will perform
-  an "initscr" call to make sure it has a "stdscr" window value.
+  an "initscr" call to make sure it has a "stdscr" window value. 
 
   It is assumed that the application calling the menu routines is not a
   "Perl+curses" application (i.e. it is a "stock" perl script except for calls
-  to "menu.pl" routines).  However, if you are writing an "all-curses"
+  to PerlMenu routines).  However, if you are writing an "all-curses"
   application (calling curses functions from your routines) you should call
   "initscr" (to init the curses environment) and pass the value returned to
   "menu_curses_application".  This set of actions need only be done ONCE (at
   the beginning of our program).  The call to "menu_curses_application" saves
   the window value for subsequent use and sets a flag so that the "initscr"
-  and "endwin" calls are NOT done by the menu.pl package calls. You should
+  and "endwin" calls are NOT done by the PerlMenu package calls. You should
   make sure you issue an "endwin" call prior to exiting. 
 
   On some systems it has been reported that there is "screen flicker" 
   between menu calls.  The screen may appear to clear, flash an old screen
   briefly, and then paint the new menu.  This may be due to the fact that
-  menu.pl by default will issue an "initscr" and "endwin" call around every
+  PerlMenu by default will issue an "initscr" and "endwin" call around every
   menu display.  If this causes "screen flicker" on your system, make sure you
   code your application with a call to "initscr" and pass the value to the
   main window as follows:  
 
-      #require "menu.pl";
+      use perlmenu;
    
       $window = &initscr();
       &menu_curses_application($window);
@@ -832,7 +933,9 @@ Other Menu-Related "menu.pl" Routines
   --------
   Routine:      menu_prefs
 
-  Syntax:       &menu_prefs(centered_menus,gopher_like,disable_quit);
+  Syntax:       &menu_prefs(centered_menus,gopher_like,disable_quit,
+                            quit_prompt,quit_default,multiple_cols,
+                            selection_cursor_type);
 
   Input args:   - Flag indicating centered menus are desired.
                 - Flag indicating more gopher-like arrow functions desired.
@@ -844,31 +947,58 @@ Other Menu-Related "menu.pl" Routines
                   "N".  This value is used as the default response on the
                   "quit" prompt.  Any value other than those listed results
                   in the default reverting to "y".
+                - Flag indicating single-column or multiple-column menus.
+                - Flag indicating selection cursor type (arrowed or
+                  highlighted).
 
   Returns:      Nothing.
 
   If the "centered_menus" flag is non-zero all menus will be centered on the
   screen.
 
-  If the "gopher_like" flag is non-zero the left-arrow key will act as a "u"
-  ("up") hot-key and the right arrow key will act as a "return" hot-key. 
-  Normal action is that left-arrow acts like an up-arrow and the right-arrow
-  acts like a down-arrow.  In addition, the scrolling action of menus when the
+  If the "gopher_like" flag is non-zero the effect depends on whether "single
+  column" or "multiple column" menus are preferred (see below). For "single
+  column" mode the left-arrow key will act as a "u" ("up") hot-key and the
+  right arrow key will act as a "return" hot-key. Normal action (for "single
+  column" mode) is that left-arrow acts like an up-arrow and the right-arrow
+  acts like a down-arrow.  For "multiple column" mode the left-arrow and
+  right-arrow keys are used to move between columns. In addition (for either
+  single or multiple column modes), the scrolling action of menus when the
   arrow keys are used to move up from the top item or down from the bottom
   item changes to a more "gopher-like" paging action.  Wrapping from the first
-  page to the last page is also activated.
+  page to the last page is also activated.  
 
   If the "disable_quit" flag is non-zero the "quit" hot-key is disabled. 
   Pressing "q" will do nothing (and the "quit" function will not appear on the
   help screen for menus).
 
+  If the "multiple_cols" flag is non-zero multiple selection items will be
+  placed on each line of the menu (filling each line left-to-right column-wise
+  first, then moving to the next line, etc).  The number of items on each line
+  (and width of each column) is computed automatically by using the length of
+  the LONGEST selection text in the menu and dividing it into the width (in
+  characters) of the screen.  For very short selection texts on "radio" or
+  "multiple selection" menus you may want to change the default "first item"
+  text (on the "menu_display_radio" and "menu_display_mult" calls) to shorter
+  values since this item may turn out to be the longest selection text (and
+  therefore limit the number of items you can pack on single line).  No
+  provision is made to specify an explicit number of items per line or the
+  column width (although you can somewhat control this by padding the maximum
+  selection text length for an item).  The display of items in ascending
+  columns (filling all rows on the left column first, then moving to the next
+  column, etc.) is NOT supported.  
+
   If "menu_prefs" is never called the following defaults are set:
 
-    - Left-justified (non-centered) menus,
+    - Left-justified (non-centered) menus
     - Non-gopher-like right/left arrow keys
     - "Quit" is a valid menu hot-key.
+    - The default "quit" prompt is "Do you really want to quit?"
+    - The default prompt to the "quit" question is "y"
+    - Single-column menus
+    - "Arrowed" selection cursor ("->" in front of item)
 
-  These defaults match previous releases of the menu.pl system. 
+  These defaults match previous releases of the PerlMenu system. 
 
   --------
   Routine:      menu_quit_routine
@@ -942,7 +1072,7 @@ Other Menu-Related "menu.pl" Routines
 Templates -- Full Screen Data Entry
 -----------------------------------
 
-  The menu.pl package contains a facility to allow data-entry from formatted
+  The PerlMenu package contains a facility to allow data-entry from formatted
   multiple-field full-screen definitions.  Definition of the screens is
   extremely simple and can be done with any full-screen text editor.  In
   essence, you edit the screen exactly as you want it to look (including
@@ -1417,7 +1547,7 @@ Other template routines
   "menu_display_template".  By default only "Return" causes the termination
   of data input by the user.  By using "menu_template_setexit", additional
   "escape sequences" or control keys can be defined to allow return.  By
-  using the "menu_getexit" call (see "Other Menu-Related "menu.pl" Routines")
+  using the "menu_getexit" call (see "Other Menu-Related PerlMenu Routines")
   the actual key(s) used can be interrogated and subsequent program action
   taken accordingly.  For example, you could define "Control-X" as an
   additional exit sequence with "&menu_template_setexit("\cX");" to indicate
@@ -1445,7 +1575,7 @@ Template data entry example
     BEGIN { $Curses::OldCurses = 1; }
     use Curses;
 
-    require "./menu.pl";        # Main menu package
+    use perlmenu;       # Main menu package
     require "./menuutil.pl";    # For "pause" and "print_nl" routines
 
     @input_data = ();   # Place to put data entered on screen
@@ -1472,7 +1602,7 @@ Template data entry example
     # Data entry fields denoted by underscores ("_") or back-slashes ("\");
     #
     &menu_load_template("./template_data");
-    &menu_overlay_template(0,28,"Perl Menu Version 3.3",1,1);
+    &menu_overlay_template(0,28,"Perl Menu Version 4.0",1,1);
     &menu_overlay_template($LINES-5,10,
          "Fields between \"*\" are required.",1);
 
@@ -1608,7 +1738,7 @@ For the record
 --------------
 
 PerlMenu - Perl library module for curses-based menus & data-entry templates
-Copyright (C) 1992-96  Iowa State University Computation Center             
+Copyright (C) 1992-97  Iowa State University Computation Center             
 
    This Perl library module is free software; you can redistribute it
    and/or modify it under the terms of the GNU Library General Public

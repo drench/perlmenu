@@ -32,7 +32,7 @@
 #		&clear_screen   -- Clear the screen
 #
 # PerlMenu - Perl library module for curses-based menus & data-entry templates
-# Copyright (C) 1992-96  Iowa State University Computation Center
+# Copyright (C) 1992-97  Iowa State University Computation Center
 #                        Ames, Iowa  (USA)
 #
 #    This Perl library module is free software; you can redistribute it

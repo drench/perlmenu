@@ -14,18 +14,23 @@
 #          Ames, IA  50011
 #          Email: skunz@iastate.edu
 #
-# Date:    February 1996
+# Date:    February 1997
 #**************************************************************************
 
+# Perl5+Curses ONLY!
 # Comment these lines for use with Perl4/curseperl
 BEGIN { $Curses::OldCurses = 1; }
-use Curses;
+use Curses;                     # PerlMenu needs "Curses"
+use perlmenu;                   # Main menu package (Perl5 only)
+require "./menuutil.pl";        # For "pause" and "print_nl" routines.
 
-#
-# Load the key package
-#
-require "./menu.pl";		# Main menu package
-require "./menuutil.pl";	# For "pause" and "print_nl" routines
+# Perl4/curseperl ONLY!
+# Uncomment these lines for use with Perl4/curseperl
+# (Did you remember to run "create_menu.pl"?)
+#require "./menu.pl";           # Main menu package (Perl4 only)
+#require "./menuutil.pl";       # For "pause" and "print_nl" routines.
+
+$| = 1;				# Flush after every write to stdout
 
 @input_data = ();	# Place to put data entered on screen
 @defaults = ();		# Default data
@@ -80,7 +85,7 @@ $row = $col = 0;	# Storage for row/col used by menuutil.pl
    Abort this demo here with "Control-X".
 END_OF_TEMPLATE
 
-&menu_overlay_template(0,28,"Perl Menu Version 3.3",1,1);
+&menu_overlay_template(0,28,"Perl Menu Version 4.0",1,1);
 &menu_overlay_template($LINES-5,10,
 	"Fields marked with a \"*\" are required.",1);
 
@@ -175,6 +180,7 @@ for ($i = 1; $i <= 3; $i++) {
 
 &clear_screen();
 &refresh();
+&endwin;
 exit(0);
 
 #**********

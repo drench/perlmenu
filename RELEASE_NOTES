@@ -1,9 +1,9 @@
 
-                                   menu.pl
+                                 perlmenu.pm
                                  Perl Menus
-                                 Version 3.3
+                                 Version 4.0
                                 Release Notes
-                              February 19, 1996
+                              February 17, 1997
 
                                Steven L. Kunz
                            Networked Applications
@@ -12,9 +12,52 @@
                                  Ames,  Iowa
 
 
-Copyright (C) 1992-96  Iowa State University Computation Center
+Copyright (C) 1992-97  Iowa State University Computation Center
                        Ames, Iowa (USA)
 
+
+Changes between perlmenu.pm version 4.0 and menu.pl version 3.3:
+
+- Converted to Perl5-style "perlmenu.pm" module.  A program (create_menu.pl)
+  is included to convert this module to the old Perl4-style "menu.pl" module
+  for legacy applications and Perl4+curseperl users.  All old PerlMenu
+  programs should run without changes using this new "menu.pl" module.
+  Conversion to use "perlmenu.pm" under Perl5 should only require changing
+  "require" to a "use".
+- Added multiple-column menu support (requested by many people).
+  Single call to "menu_prefs" converts all menus to "multiple column"
+  selections.  No changes to existing menu construction routines in old
+  code required.  Automatically scales and computes proper number of
+  columns based on length of longest selection text.
+- Added a "highlighted" selection cursor preference.  Previous versions only
+  displayed the selection cursor with a "->" in front of the item.  A new
+  preference setting removes the "->" and highlights the selection text
+  (in reverse video on most systems).  Single call to "menu_prefs" converts
+  all menus to "highlighted" selections.
+- Expanded the main "demo" program to enable switching between single and
+  multiple column menus, arrowed or highlighted selection cursor, numbered
+  and unnumbered menus.
+- Split out (and rewrote) the installation instructions into a new file
+  called "INSTALLATION".  Included a new "install_hints.pl" program (for
+  Perl5+Curses users) which tries to figure out what tweeks you may need to
+  make it work on your system.
+- Made appropriate changes to all other documentation as appropriate for the
+  new features.
+- Added a new "FAQ" document.
+- Fixed a bug in that relates to typing an item selection number that is
+  greater than the last item in the menu.  Previously it dropped the
+  selection arrow to the last item but crashed when you pressed "return".
+  Now it "beeps" (to indicate an invalid selection).  Thanks to Jay Fowler
+  (CSU-Fresno, USA) for pointing this out.
+- Fixed bug in demo scripts.  Previous versions were missing some calls to
+  "endwin" prior to every "exit", which meant the original terminal
+  environment was not restored (leaving the terminal in "raw" mode, etc.).
+  Thanks to Warren Jones (Fluke Corporation, Everett, WA, USA) for the
+  bug report and patches.
+- Added comment for HP-UX 9.05 terminfo/tput users in perlmenu.pm ("tput kent"
+  does not work on these systems, use "tput cr").  Thanks to Stuart Poulin
+  (Applied Microsystems Corporation, Redmond, WA, USA) for supplying this
+  info. 
 
 Changes between menu.pl version 3.3 and version 3.2:
 
@@ -32,7 +75,8 @@ Changes between menu.pl version 3.3 and version 3.2:
   text and action-text for the items as calling parms, providing a means
   of providing textual help for the item.  The "demo" sample program
   is modified to provide help on individual items on the main menu to
-  demonstrate this feature.
+  demonstrate this feature.  Thanks to Trey Harris (University of North
+  Carolina at Chapel Hill) for suggesting this idea.
 - Added a new call ("menu_help_routine") to allow overridding the default
   generic help screen (seen by pressing "h") so you can supply your own.
 - Added new operands to the "menu_prefs" call to allow overriding the

@@ -19,18 +19,23 @@
 #          Marshall Space Flight Center
 #          Huntsville, AL
 #
-# Date:    February 1996
+# Date:    February 1997
 #****************************************************************************
 
+# Perl5+Curses ONLY!
 # Comment these lines for use with Perl4/curseperl
 BEGIN { $Curses::OldCurses = 1; }
-use Curses;
+use Curses;                     # PerlMenu needs "Curses"
+use perlmenu;                   # Main menu package (Perl5 only)
+require "./menuutil.pl";        # For "pause" and "print_nl" routines.
 
-#
-# Load the key packages
-#
-  require "./menu.pl";
-  require "./menuutil.pl";
+# Perl4/curseperl ONLY!
+# Uncomment these lines for use with Perl4/curseperl
+# (Did you remember to run "create_menu.pl"?)
+#require "./menu.pl";           # Main menu package (Perl4 only)
+#require "./menuutil.pl";       # For "pause" and "print_nl" routines.
+
+$| = 1;				# Flush after every write to stdout
 
 # These three arrays are required for the menu routines...all three must
 # stay in the same order.  [0] is first field on screen ... etc.
@@ -68,8 +73,10 @@ use Curses;
 #
 # Load the template and add a standout "sticky" title
 #
-  &menu_load_template("./template_reg");
-  &menu_overlay_template(0,28,"Perl Menu Version 3.3",1,1);
+  if (&menu_load_template("./template_reg")) {
+    die "Cannot find \"template_reg\" template file.\n";
+  }
+  &menu_overlay_template(0,28,"Perl Menu Version 4.0",1,1);
 
 #
 # Build some parts we couldn't put into the template file (because the

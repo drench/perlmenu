@@ -1,0 +1,318 @@
+
+                                 perlmenu.pm
+                                 Perl Menus
+                                 Version 4.0
+                              February 17, 1997
+
+                               Steven L. Kunz
+                           Networked Applications
+                  Iowa State University Computation Center
+                            Iowa State University
+                                 Ames,  Iowa
+                  
+
+PerlMenu - Perl library module for curses-based menus & data-entry templates
+Copyright (C) 1992-97  Iowa State University Computation Center                        Ames, Iowa  (USA)
+
+--------------------------------
+A bit of history (and a warning)
+--------------------------------
+
+  The PerlMenu package was written originally for Perl 4.36 (with the
+  "curseperl" extensions).  When Perl5 came out PerlMenu was modified to
+  include some "compatibility tweeks" so it worked with William Setzer's
+  "Curses" extension, but was still distributed "Perl4-ready".  The
+  PerlMenu module was named "menu.pl" (in Perl4 fashion). 
+  
+  Later versions of PerlMenu have been distributed to run on Perl5+Curses
+  "out-of-the-box".  Beginning with PerlMenu version 4.0, the package is
+  distributed as a Perl5-style "perlmenu.pm" module.  However, even this
+  latest version can still be converted to run under Perl4 (by generating
+  a Perl4-style "menu.pl" module).  While I like to think that I can
+  continue to bring new features to everybody, there will be a day coming
+  when "menu.pl" is "iced" and new features only appear under the Perl5
+  version.
+  
+  See that "Wall" over there.  No, not the one named "Larry" - the other
+  one made of stone.  It has writing on it ... ;-)
+
+
+-------------------------------
+Installation for use with Perl5
+-------------------------------
+
+  *** You must have at least Perl 5.001 ***
+  
+  1) You need to have William Setzer's "Curses" extension built into Perl5. 
+     This package is available from any "CPAN" ("Comprehensive Perl Archive
+     Network") site.  Point your WWW browser to:  
+
+       http://www.perl.com/perl/CPAN/CPAN.html
+
+     and look for "Curses" in the "User Interfaces" section.
+
+  2) You may have to modify the first line of the demo scripts ("demo",
+     "demo_getstr", "demo_template", "demo_top", "demo_util", "ezview",
+     "ezreg", and "ezpasswd") to point to where your "Perl5" is installed. 
+     They are distributed assuming "/usr/local/bin/perl5".  
+
+  3) Beginning with PerlMenu version 4.0 the PerlMenu package is
+     distributed as a "perlmenu.pm" file.  The demos are written to
+     "use perlmenu;" in Perl5 fashion.  However, you may have "legacy"
+     applications which require the old-style "menu.pl" module (which you
+     have a "require" for in your code).  Run the program "create_menu.pl"
+     which will create "menu.pl" from "perlmenu.pm".  Your old Perl5
+     applications should work fine using this module.
+
+     Perl5 users should convert to use "perlmenu.pm" as soon as it is
+     convenient.  In general this conversion is simply finding your 'require
+     "menu.pl";' statements and replacing them with 'use perlmenu.pm;'
+     statements.  You might also want to check out the new features in this
+     release and tweek your code to use them.  
+
+  4) If the "demo" script runs fine, skip this step.  If not you probably
+     have "terminfo" or "termcap" information retrieval problems.
+  
+     There are various ways different systems use to retrieve the escape
+     sequences in use for the current terminal for generic functions (like
+     "move the cursor up").  The two most common methods are "termcap"
+     support (where there is a "termcap" file which you retrieve values from
+     with a "getcap" subroutine call) and "terminfo" support (where there is
+     a "terminfo" file which you retrieve values from with a "tput"
+     command).  Some systems (such as Solaris) may use "tigetstr" functions.
+
+     This package is distributed with the assumption you have the older
+     "termcap" support (and therefore have "getcap" incorporated into your
+     Perl5+Curses support).  If the demo script fails to run "out of the
+     box" with the following (or similar) message:  
+
+       Curses function 'getcap' is not defined by your vendor ...
+
+     or "seg faults" (DEC/OSF systems do this) you may have to
+     comment/uncomment small portions of "perlmenu.pm" to reflect the
+     terminal support on your system.
+
+     A small Perl script called "install_hints.pl" is included to assist you
+     in figuring out what to do at this point.  Check the first line of
+     "install_hints.pl" to make sure it is pointing to your "Perl5+Curses" 
+     location, then run it.  It will try various things and (hopefully)
+     suggest a method that will work on your system.  It will indicate one
+     (or more) "methods" that may work.  Pick one and change things as
+     indicated in one of the following sections:  
+
+     - Method 1 (getcap)
+
+       You have "getcap" (or are told you can probably simulate it).  Since
+       the demo didn't work you probably have a "getcap" with bugs in it
+       (there are some out there).  Edit "perlmenu.pm" and scan for "# PERL5
+       ONLY (GETCAP PROBLEMS)".  You will find a section of commented code
+       below here that will simulate a correct "getcap" call (for Perl 5.001
+       and later).  Locate and uncomment these statements so it looks like
+       THIS and try again:  
+
+       # PERL5 ONLY (GETCAP PROBLEMS)
+       # Uncomment these statements if you DON'T have "getcap()" OR
+       # if the demo doesn't appear to work (there's a bug in some getcap's).
+       #
+       if ($] >= 5.001) {
+       package Perl5::Menu_PL::Compat;       # Don't pollute menu.pl namespace
+       require Term::Cap;                    # Get Tgetent package
+       $term = Tgetent Term::Cap { OSPEED => 9600 };  # Define entry
+       sub perlmenu::getcap { $term->{"_" . shift()} };  # Define local subr
+       }
+
+       DO NOT comment out the code in "# Method 1 (getcap)" - since you are
+       simulating getcap you need the "# Method 1 (getcap)" code, also.  It
+       should work now.  Try the demo again.
+
+     - Method 2 (tput)
+       Edit the "perlmenu.pm" module and COMMENT OUT the statements in
+       the "# Method 1 (getcap)" block.  Locate the "# Method 3 (tput)"
+       block of statements and UNCOMMENT those.  Try the demo again.
+
+     - Method 3 (tigetstr)
+       Edit the "perlmenu.pm" module and COMMENT OUT the statements in
+       the "# Method 1 (getcap)" block.  Locate the "# Method 4 (tigetstr)"
+       block of statements and UNCOMMENT those.  Try the demo again.
+
+     For any of these methods make sure ONLY ONE of the "Method 1", "Method
+     2", or "Method 3" sections is "live"  (i.e not commented out).  In
+     addition, if you simulated getcap (under the "Method 1" section above)
+     then "Method 1 (getcap)" must also NOT BE COMMENTED.  As distributed,
+     the first section (assuming you have "getcap") is live.  
+
+     A special note for HP-UX 9.05 users.  If you are uncommenting the
+     "tput" code, pay attention to the comment about "HP-UX 9.05 users" in
+     the "Method 3 (tput)" area.  
+
+     If you don't have "tput", "tigetstr" or "getcap", you will have to
+     hard-code the values needed (bad, because they are terminal specific)
+     or find out how your system retrieves termcap or terminfo capabilities
+     (and how you get that info via Perl).  The general idea is to assign
+     the proper string values to $ku, $kd, $kr, $kl, $cr, and $nl to
+     indicate the "escape sequences" needed to perform the generic function. 
+     If you come up with a technique you think will benefit others be sure
+     and send me email and I'll try to include it in a future release (email
+     to "skunz@iastate.edu"). 
+
+     Note that if you have created a "menu.pl" module (with the
+     "create_menu.pl" program in Step 3) you will have to make similar
+     changes in the "menu.pl" source, too.
+
+  5) Put "perlmenu.pm" (and "menu.pl" if required) with the rest of your Perl
+     packages (usually in something like "/usr/local/lib/perl5" or
+     "/usr/local/lib/perl").  The demo programs will work by just leaving a
+     copy of the modules in the same directory as the demo scripts.
+
+  6) Note that if you move the demo programs into a public area (and out of
+     the distribution library), you should change the "use" and "require"
+     statements as appropriate so they find the PerlMenu modules.  
+
+
+-------------------------------
+Installation for use with Perl4
+-------------------------------
+
+  1) If you don't have curseperl working and installed somewhere, go into
+     your Perl 4.36 distribution (in the "usub" directory) and construct it
+     following the instructions there. 
+
+     Install your "curseperl" in the same location as your normal "perl"
+     binary.
+
+  2) Run the Perl program "create_menu.pl" (distributed with PerlMenus). 
+     This will convert the Perl5-style module "perlmenu.pm" to the
+     Perl4-style module "menu.pl".  You 'require "menu.pl";' under
+     Perl4/curseperl (instead of the 'use perlmenu;' that you do under
+     Perl5).  
+
+     Save the "perlmenu.pm" module for whenever you convert to Perl5.
+     
+  3) You will have to modify the first line of the demo scripts ("demo",
+     "demo_getstr", "demo_template", "demo_top", "demo_util", "ezview",
+     "ezreg", and "ezpasswd") to point to where your "curseperl" is
+     installed.  They are distributed "Perl5-ready" (assuming your are using
+     "/usr/local/bin/perl5" and have the Curses extension installed).
+     
+     You will also need to comment out the lines at the beginning of each
+     demo script which set the "$Curses::OldCurses = 1;"  flag and "use" the
+     "Curses" and "perlmenu" packages (which you don't have on Perl4).  You
+     should un-comment the "require"  statements for "menu.pl" and
+     "menuutil.pl".  Read the comments in the demos - they tell you what to
+     do.  
+
+  4) If the "demo" script runs fine, skip this step.  If not you probably
+     have "terminfo" or "termcap" information retrieval problems.
+
+     There are various ways different systems use to retrieve the escape
+     sequences in use for the current terminal for generic functions (like
+     "move the cursor up").  The two most common methods are "termcap"
+     support (where there is a "termcap" file which you retrieve values from
+     with a "getcap" subroutine call) and "terminfo" support (where there is
+     a "terminfo" file which you retrieve values from with a "tput"
+     command).  Some systems (such as Solaris) may use "tigetstr" functions.
+
+     This package is distributed with the assumption you have the older
+     "termcap" support (and therefore have "getcap" incorporated into your
+     Perl4/curseperl support).  If the demo script fails with the following
+     (or similar) message:  
+
+       Undefined subroutine "main'getcap" called at <PerlMenu> line ...
+
+     or "seg faults" (DEC/OSF systems do this) you may have to
+     comment/uncomment small portions of "menu.pl" to reflect the terminal
+     support on your system.  Proceed as follows. 
+
+     - You may be able to simulate "getcap".  Edit "menu.pl" and scan for
+       "# PERL4 ONLY (GETCAP PROBLEMS)".  You will find a section of
+       commented code below here that will simulate a correct "getcap" call
+       (for Perl4).  Locate and uncomment these statements so it looks like
+       THIS and try again:  
+
+       # PERL4 ONLY (GETCAP PROBLEMS)
+       # Uncomment these statements if you DON'T have "getcap()" OR
+       # if the demo doesn't appear to work (there's a bug in some getcap's).
+       #
+       if (($] >= 4.0) && ($] < 5.0)) {       # Perl4 ONLY!
+       package simgetcap;                     # Don't pollute menu.pl namespace
+       $ispeed = $ospeed = 13;                # Set old-style "9600";
+       require "termcap.pl";                  # Get Tgetent package
+       &Tgetent($ENV{'TERM'});                # Load $TC array
+       sub main'simgetcap { $TC{shift}; };    # Define local subroutine
+       }
+
+       DO NOT comment out the code in "# Method 1 (getcap)" - since you are
+       simulating getcap you need the "# Method 1 (getcap)" code, also.  
+       However, you will need to change the code at "# Method 1 (getcap)"
+       to look like the following (since the simulated "getcap" is not called
+       "getcap" but "simgetcap"):
+
+       # Method 1 (getcap)
+       # Uncomment if you have "getcap"
+           $ku = &main'simgetcap('ku');        # Cursor-up
+           $kd = &main'simgetcap('kd');        # Cursor-down
+           $kr = &main'simgetcap('kr');        # Cursor-right
+           $kl = &main'simgetcap('kl');        # Cursor-left
+           $cr = &main'simgetcap('cr');        # Carriage-return
+           $nl = &main'simgetcap('nl');        # New-line
+
+       It should work now.  Try the demo again.
+
+     - It simulating "getcap" doesn't work, try the following command at a
+       command prompt on your system: 
+
+         tput kcuu1
+
+       If the command is valid, you have "terminfo" (instead of "termcap")
+       terminal control.  If you don't have a "tput" command, your system
+       may use "tigetstr" instead.
+       
+       The best way to proceed is to edit the "menu.pl" file, find the
+       "menu_init" subroutine, and look for three blocks of code, each
+       starting with the following comments: 
+
+         # Method 1 (getcap)
+         # Uncomment if you have "getcap"
+           [...]
+         # Method 2 (tigetstr)
+         # Uncomment if you have tigetstr (Solaris) instead of "getcap"
+           [...]
+         # Method 3 (tput)
+         # Uncomment if you have terminfo (and tput) instead of "getcap"
+           [...]
+
+       Make sure ONLY ONE of these sections is "live" (i.e not commented
+       out) and try each, one at a time.  As distributed, the first section
+       (assuming you have "getcap") is live.  Hopefully one of the others
+       will work.  Since you probably already tried the "getcap" and
+       "simulated getcap" methods, you need to commend out the code in the
+       "Method 1 (getcap)" area and try the other two (one at a time).
+
+       A special note for HP-UX 9.05 users.  If you are uncommenting the
+       "tput" code, pay attention to the comment about "HP-UX 9.05 users" in
+       the "Method 3 (tput)" area.  
+
+     - If you don't have "tput", "tigetstr" or "getcap", you will have to
+       hard-code the values needed (bad, because they are terminal specific)
+       or find out how your system retrieves termcap or terminfo
+       capabilities (and how you get that info via Perl).  The general
+       idea is to assign the proper string values to $ku, $kd, $kr, $kl,
+       $cr, and $nl to indicate the "escape sequences" needed to perform
+       the generic function.  If you come up with a technique you think
+       will benefit others be sure and send me email and I'll try to include
+       it in a future release (email to "skunz@iastate.edu").
+
+  5) Put "menu.pl" with the rest of your Perl packages (usually in something
+     like "/usr/local/lib/perl").  The demo programs will work by just
+     leaving a copy of the modules in the same directory as the demo
+     scripts.  
+
+  6) Note that if you move the demo programs into a public area (and out of
+     the distribution library), you should change the "require" statements
+     as appropriate so they find the PerlMenu modules. 
+
+---
+Steven L. Kunz
+Networked Applications
+Iowa State University Computation Center, Iowa State University, Ames  IA
+INET: skunz@iastate.edu

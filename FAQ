@@ -1,0 +1,116 @@
+                                 perlmenu.pm
+                                 Perl Menus
+                                 Version 4.0
+                              February 17, 1997
+
+                               Steven L. Kunz
+                           Networked Applications
+                  Iowa State University Computation Center
+                            Iowa State University
+                                 Ames,  Iowa
+                  
+
+                         --------------------------
+                         Frequently Asked Questions
+                         --------------------------
+
+---------------------------
+Where do I get "PerlMenus"?
+---------------------------
+
+  The PerlMenu package is distributed via "CPAN" (the "Comprehensive Perl
+  Archive Network").  Pick a CPAN site near you with a WWW browser pointed
+  at "http://www.perl.com/perl/CPAN/CPAN.html" and go into the
+  "authors/Steven L Kunz" folder.  You should find the latest release there.
+
+  The author's official distribution is alos available via anonymous FTP
+  from: 
+
+      ftp://ftp.iastate.edu/pub/perl/perlmenu.v<n>.<n>.tar.Z
+
+  New releases are announced in the Usenet newsgroups
+  "comp.lang.perl.announce" and "comp.lang.perl.modules".
+
+
+----------
+The terminal state ("echo" and other settings) are not restored when 
+exiting a PerlMenu application.  
+----------
+
+     This is usually due to either an obscure coding problem (outlined here)
+     or a problem with your curses library (which you probably can do
+     nothing about but can circumvent).  Both situations are discussed here. 
+
+     The most common coding problem occurs when you write an application
+     using curses calls yourself (and not letting PerlMenu do ALL the work). 
+     It may be the case you are using "menu_curses_application" and NOT
+     calling "endwin" before exiting your application.  Refer to the
+     "menu_curses_application" routine documentation (in the "Other
+     Menu-Related PerlMenu Routines" section of this document).  You will
+     find a sentence that indicates "You should make sure you issue an
+     "endwin" call prior to exiting." when using the
+     "menu_curses_application" routine.  This "endwin" call is what restores
+     the terminal environment on most systems.  It is a subtle mistake
+     (indeed, until version 4.0 of PerlMenu it was present in many of the
+     demo programs included with PerlMenu!).  Double-check your code for an
+     "endwin" at every exit point if you use "menu_curses_application" in
+     your code.  If you have code that looks like this at the top of your
+     program:  
+
+       $window = &initscr();
+       &menu_curses_application($window);
+
+     then you will need this at every exit point:
+
+       &endwin;
+
+     Sometimes you can code the "endwin" routine as your
+     "menu_quit_routine".  For example:  
+
+       &menu_quit_routine( "endwin" );
+
+     If you have other code to do in a "menu_quit_routine", include
+     "&endwin"  near the end.  Make sure you are covered by a call to
+     "endwin" at any other exit points within your code.  
+
+     If you continue to have problems with terminal settings after checking
+     for the above conditions, you may have a problem in your curses library
+     (built into your version of Perl) that prevents proper restoration of
+     the "tty" settings.  A circumvention that works is restore the terminal
+     settings yourself before you exit your code (again, the same place your
+     "endwin" calls are located - probably AFTER them).  Include a Perl
+     command like the following:  
+
+       [...]
+       &endwin;
+       system("stty sane");
+       [...]
+
+     This UNIX command restores a general default environment to your tty
+     terminal on many UNIX systems.  You can check on your particular "stty"
+     options and only turn back on the ones that you know are bad
+     ('system("stty echo");' or whatever).  Experiment with the "stty"
+     command AFTER exiting your application to see what restores the
+     terminal on your system, then code that into your application in all
+     the appropriate exit points.  
+
+----------
+The demos don't work right.  It looks like everything I type is "buffered
+up" and not acted upon right away, then a whole bunch happens at once!
+----------
+  
+  Try placing the following line at the beginning of your main code
+  (before the first call to "menu_init": 
+  
+    $| = 1;    # Flush after every write to stdout
+    
+  This forces STDOUT to flush after every "write" or "print".  Many systems
+  default to "line buffering" by default for output to the terminal.
+
+----------
+I want to mix menus and templates.  For example, I want to put a three item
+"radio" button menu on my input template to simplify setting something.
+----------
+
+  Sorry, you can't do this (yet).  It is on the list of "things to do".
+  

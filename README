@@ -1,8 +1,8 @@
 
-                                   menu.pl
-                                 Perl Menus
-                                 Version 3.3
-                              February 19, 1996
+                                 perlmenu.pm
+                              PerlMenu Package
+                                 Version 4.0
+                              February 17, 1997
 
                                Steven L. Kunz
                            Networked Applications
@@ -12,7 +12,7 @@
                   
 
 PerlMenu - Perl library module for curses-based menus & data-entry templates
-Copyright (C) 1992-96  Iowa State University Computation Center                        Ames, Iowa  (USA)
+Copyright (C) 1992-97  Iowa State University Computation Center                        Ames, Iowa  (USA)
 
    This Perl library module is free software; you can redistribute it
    and/or modify it under the terms of the GNU Library General Public
@@ -29,183 +29,138 @@ Copyright (C) 1992-96  Iowa State University Computation Center                 
    Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 
+--------
+Overview
+--------
+
+  The "perlmenu.pm" package is a Perl5 package (built into your Perl program
+  with a "use perlmenu.pm" command) that automates curses-based full screen
+  menus and data entry.  It also functions under Perl4/curseperl.
+
+  Using three simple calls, any number of items may be selected from a
+  single or multiple-page menu by moving an arrow to the desired item (or
+  directly entering the selection number displayed on the screen).  In
+  addition to simple "single one-shot selection menus", "radio button" style
+  menus and "multiple-item-selection" menus are provided.  Paging through
+  multiple-page menus is handled automatically.  Menu titles, sub-titles,
+  prompts, "single column", and "multiple column" menus are supported.
+
+  Using two simple calls a full-screen data entry template may be loaded
+  and a fully-titled data entry input screen may be created.  Defaults,
+  maximum field lengths, and numeric-only data are supported.
+
+  The "perlmenu.pm" package uses curses interface routine calls supplied by
+  the Curses extension for Perl5 (you should be running AT LEAST Perl
+  5.001).  A "menu.pl" package can be created which uses curses interface
+  routine calls supplied by the "curseperl" package for Perl4.  All
+  functions and features are identical whether you are using Perl4 or Perl5. 
+
+
+------------------------------------
 The Official PerlMenu WWW home page:
 ------------------------------------
 
-The official PerlMenu WWW home page (maintained by the author) is at:
+  The official PerlMenu WWW home page (maintained by the author) is at:
 
-          http://www.cc.iastate.edu/perlmenu/
+      http://www.cc.iastate.edu/perlmenu/
 
 
-Distribution Contents:
+----------------------------
+Official Distribution Points
+----------------------------
+
+  The PerlMenu package is distributed via "CPAN" (the "Comprehensive Perl 
+  Archive Network").  Pick a CPAN site near you with a WWW browser pointed
+  at "http://www.perl.com/perl/CPAN/CPAN.html" and go into the
+  "authors/Steven L Kunz" folder.  You should find "perlmenu.v4.0.tar.Z" in
+  there.
+
+  The author's official distribution is alos available via anonymous FTP
+  from: 
+
+      ftp://ftp.iastate.edu/pub/perl/perlmenu.v4.0.tar.Z
+
+  New releases are announced in the Usenet newsgroups
+  "comp.lang.perl.announce" and "comp.lang.perl.modules".  
+
+
+----------------------
+Distribution Contents
 ----------------------
 
-This is "menu.pl" - a set of perl routines that will perform full screen
-menu functions using "curseperl".  What you should have after unpacking 
-this package is the following:
+This is "perlmenu.pm" - a set of perl routines that will perform full screen
+menu functions using Perl5+Curses.  What you should have after unpacking
+this package is the following:  
 
-  ARTISTIC       Artistic License
+  ARTISTIC          Artistic License
 
-  COPYING        Library GNU Public License
+  COPYING           Library GNU Public License
 
-  README         (this file)
+  FAQ               Frequently Asked Questions
 
-  RELEASE_NOTES  Differences between this version and previous versions.
+  INSTALLATION      Guide to installing PerlMenus
 
-  MENU_DOC       A user's guide to the menu.pl routines.
+  MENU_DOC          A user's guide to the perlmenu.pm routines.
 
-  MENU_DOC       A user's guide to the menuutil.pl routines.
+  MENU_DOC          A user's guide to the menuutil.pl routines.
 
-  TO_DO          List of things on my "to do" sheet.
+  README            (this file)
 
-  demo           A simple menu demo showing all several types of menu
-                 selection capabilities (simple single-page, simple
-                 multiple-page, radio-button, and multiple-selection).
+  RELEASE_NOTES     Differences between this version and previous versions.
 
-  demo_getstr    A simple menu demo using the "menu_getstr" routine.
+  TO_DO             List of things on my "to do" sheet.
 
-  demo_template  A demo using the "menu_load_template" and
-                 "menu_display_template" routines.
+  create_menu.pl    Create a Perl4-style "menu.pl" module from the
+                    Perl5-style "perlmenu.pm" module.  Used for legacy
+                    applications under Perl4 or Perl5. 
 
-  demo_top       A simple menu demo with "top" menus.
+  demo              A simple menu demo showing all several types of menu
+                    selection capabilities (simple single-page, simple
+                    multiple-page, radio-button, and multiple-selection). 
 
-  demo_util      A simple demo of the routines in "menuutil.pl".
+  demo_getstr       A simple menu demo using the "menu_getstr" routine.
 
-  ezpasswd       A more involved demo showing how menu_getstr, menuutil.pl,
-                 and templates can be used to display full-screen formatted
-                 entries from a BSD-style /etc/password file.
+  demo_template     A demo using the "menu_load_template" and
+                    "menu_display_template" routines.
 
-  ezreg          A more involved demo showing how menu template routines 
-                 can be used in a full-screen user registration panel that
-                 a multiple required fields.
+  demo_top          A simple menu demo with "top" menus.
 
-  ezview         A more involved demo showing how menus can be used to call
-                 routines, select files, etc.
+  demo_util         A simple demo of the routines in "menuutil.pl".
 
-  menu.pl        The perl menu subroutines in a package (usually placed 
-                 somewhere like /usr/local/lib/perl/menu.pl)
+  ezpasswd          A more involved demo showing how menu_getstr, menuutil.pl,
+                    and templates can be used to display full-screen formatted
+                    entries from a BSD-style /etc/password file.
 
-  menuutil.pl    Some curses subroutines useful in constructing curseperl
-                 transactions which use "menu.pl".  These are purely optional
-                 and are not needed for using perl menus ("menu.pl").
+  ezreg             A more involved demo showing how menu template routines 
+                    can be used in a full-screen user registration panel
+                    that a multiple required fields. 
 
-  paint_text     A sample file used by "demo" to display bottom-titles
-                 loaded from a file.
+  ezview            A more involved demo showing how menus can be used to call
+                    routines, select files, etc.
 
-  template_data  A sample full-screen input template used by "demo_template"
-                 to input name/address/phone data records.
+  install_hints.pl  A small Perl5 program that helps you decide how to tweek
+                    "perlmenu.pm" for use on your system (with your flavor
+                    of termcap or terminfo).
 
-  template_ezp   The display template used by ezpasswd.
+  perlmenu.pm       The PerlMenu subroutines in a Perl5-style package (usually 
+                    placed somewhere like /usr/local/lib/perl/perlmenu.pm). 
+                    See also "create_menu.pl". 
 
-  template_reg   The display template used by ezreg.
+  menuutil.pl       Some curses subroutines useful in constructing curseperl
+                    transactions which use "perlmenu.pm".  These are purely
+                    optional and are not needed for using PerlMenus
+                    ("perlmenu.pm").  Shows some examples of "curses" 
+                    programming techniques. 
 
-  ultpatch       Patches I had to apply to the bsdcurses.mus file to make 
-                 it work on an ULTRIX (BSD based) system.
+  paint_text        A sample file used by "demo" to display bottom-titles
+                    loaded from a file.
 
-Installation:
--------------
+  template_data     A sample full-screen input template used by "demo_template"
+                    to input name/address/phone data records.
 
-  1) If you are using Perl version 4, you need to have "curseperl".
-     If you are using Perl version 5, proceed to step 2.
+  template_ezp      The display template used by ezpasswd.
 
-     If you don't have curseperl working and installed somewhere, go into
-     your perl.4.36 distribution (in the "usub" directory) and construct it
-     following the instructions there.  Be forewarned that when I put it 
-     together it didn't work on my ULTRIX 4.2a system - I had to install some
-     patches I got off comp.lang.perl (posted by drw@nevanlinna.mit.edu)
-     and some changes I had to add myself.  The file "ultpatch" is the
-     diffs between what I run and what is distributed with perl.  Patch
-     your original bsdcurses.mus with this if you are having trouble
-     getting curseperl to work with ULTRIX.  These patches mainly involve
-     commenting out routine calls absent in the ULTRIX curses package.
-
-     Install your "curseperl" in the same location as your normal "perl"
-     binary.
-
-     You may need to modify the first line of the demo scripts ("demo",
-     "demo_top" "demo_getstr", "demo_template", "demo_util", and "ezview")
-     to point to where your "curseperl" is installed.  They are distributed
-     assuming your are using "/usr/local/bin/perl5" (and have the Curses
-     extension installed).  Also, you will need to comment the lines at the
-     beginning of each demo script which set the "$Curses::OldCurses = 1;"
-     flag and "use" the Curses package (which you don't have on Perl4).
-
-  2) If you are using Perl version 5, you need to have William Setzer's
-     "Curses" extension built into Perl5.  This package is available via
-     anonymous FTP at:
-
-       ftp://ftp.ncsu.edu/pub/math/wsetzer/Curses-a8.tar.gz
-
-     You may to modify the first line of the demo scripts ("demo",
-     "demo_top" "demo_getstr", "demo_template", "demo_util", and "ezview")
-     to point to where your "perl5" is installed.  They are distributed
-     assuming "/usr/local/bin/perl5".  
-
-  3) There are various ways different systems use to retrieve the escape
-     sequences in use for the current terminal for generic functions (like
-     "move the cursor up").  The two most common methods are "termcap"
-     support (where there is a "termcap" file which you retrieve values
-     from with a "getcap" subroutine call) and "terminfo" support (where
-     there is a "terminfo" file which you retrieve values from with a 
-     "tput" command.
-
-     This package is distributed with the assumption you have the older
-     "termcap" support (and therefore have "getcap" incorporated into
-     your Perl+curses support.  If the demo script fails with the following
-     (or similar) message:
-
-        Undefined subroutine "main'getcap" called at ./menu.pl line ...
-
-     you may have to comment/uncomment small portions of menu.pl to 
-     reflect the terminal support on your system.
-
-     If you are using Perl5 with the Curses extension, you may be able
-     to simulate a "getcap" call as follows:
-       - Edit menu.pl and scan for "getcap".  You will find a section
-         of commented code that indicates '# PERL5 ONLY -- Uncomment these
-         statements if you DON'T have "getcap()"'.  Uncomment the statements
-         and try again.  It may work now (if your system supports the 
-         "termcap" style of terminal control.
-       - If it still does not work, try the following command at a command
-         prompt on your system:
-
-	    tput kcuu1
-
-         If the command is valid, you have "terminfo" (instead of "termcap")
-         terminal control.  Comment out all the sections of menu.pl code
-         that use "getcap" calls (they are all together in the menu_init
-         routine).  Find the section (a bit below it) that has the comment
-         '# Uncomment if you have terminfo (and tput) instead of "getcap"',
-         an uncomment those lines.  It should work now.
-
-     If you are using Perl4 (curseperl):
-       - Try the following command at a command prompt on your system:
-
-	    tput kcuu1
-
-         If the command is valid, you have "terminfo" (instead of "termcap")
-         terminal control.  Comment out all the sections of menu.pl code
-         that use "getcap" calls (they are all together in the menu_init
-         routine).  Find the section (a bit below it) that has the comment
-         '# Uncomment if you have terminfo (and tput) instead of "getcap"',
-         an uncomment those lines.  It should work now.
-       - If you do not have a "tput" command, your system may use "tigetstr"
-         instead.  Edit the menu.pl file, comment the "getcap" and "tput"
-         lines, uncomment the "tigetstr" lines, and try again.
-       _ If you don't have "tput", "tigetstr" or "getcap", you will have to
-         hardcode the values needed (bad, because they are terminal specific)
-         or find out how your system retrieves termcap or terminfo
-         capabilities (and how you get that info via Perl).
-
-  4) Put "menu.pl" with the rest of your perl packages (usually in something
-     like "/usr/local/lib/perl5" or "/usr/local/lib/perl").  The demo programs
-     will work by just leaving a copy of "menu.pl" in the same directory as
-     the demo scripts.
-
-  5) Note that if you move the demo programs into a public area (and out of
-     the distribution library), you should change the 'require "./menu.pl";'
-     statements in all the demos to 'require "menu.pl";' (after moving the
-     menu.pl package as outlined in the previous step).
+  template_reg      The display template used by ezreg.
 
 ---
 Steven L. Kunz
