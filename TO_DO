@@ -1,0 +1,40 @@
+                                   menu.pl
+                                 Perl Menus
+                                 Version 3.3
+                                Release Notes
+                              February 19, 1996
+
+                               Steven L. Kunz
+                           Networked Applications
+                  Iowa State University Computation Center
+                            Iowa State University
+                                 Ames,  Iowa
+
+Copyright (C) 1992-96  Iowa State University Computation Center
+                       Ames, Iowa (USA)
+
+Things to do in future releases:
+
+- Allow different rendition indications for various portions of the 
+  menus and templates.  Things like "standout", or even colors (using
+  standard ANSI or user-specified escape sequences for field rendition).
+  This would allow (for example) template fields which had errors in the
+  data to be presented in red reverse-video rendition.
+
+- Allow user specification of character-sequences used to perform certain
+  generic functions (such as "cursor_up").  You could use a call such
+  as the following:
+
+    &menu_key_bind("<function string>","<bound seq>");
+
+- Allow a new "menu_pref" that places "(Done with ..."), etc at bottom of
+  menus (instead of at the top).
+
+- Create support for headings within the menu selection items.  These
+  strings (really non-selectable items) would be "auto-skipped" during arrow
+  movement/selection.
+
+- Allow "multiple column" menus.  Support would examine the length of the 
+  longest selection text and the screen width, then place as many items on a
+  page as possible (in row/column order).  Would probably be implemented as
+  a "menu_pref".

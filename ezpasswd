@@ -1,0 +1,112 @@
+#!/usr/local/bin/perl5
+#**************************************************************************
+# ezpasswd --  Full-screen data display template demo
+#
+# Notes:   Perl4 - Requires curseperl
+#          Perl5 - Requires William Setzer's "Curses" extension
+#
+#          Demonstrates data display using templates (template file is
+#          "ezp_template" in the current directory)
+#
+#          With a little work this program could be converted to a
+#          full-screen /etc/passwd updater (left as an excercise for the
+#          user).
+#
+# Author:  Steven L. Kunz
+#          Networked Applications
+#          Iowa State University Computation Center
+#          Ames, IA  50011
+#          Email: skunz@iastate.edu
+#
+# Date:    February 1996
+#**************************************************************************
+
+# Comment these lines for use with Perl4/curseperl
+BEGIN { $Curses::OldCurses = 1; }
+use Curses;
+
+#
+# Load the key packages
+#
+require "./menu.pl";
+require "./menuutil.pl";
+
+@input_data = ();	# Not really used (but still needed)
+@display_data = ();	# Display data
+@protect = ();		# Protection
+$bell = "\007";		# Ascii bell character
+$default = "";		# Default login for main loop
+
+#
+# Since we are not using menus in this example, we need to call "menu_init"
+# to initialize the curses environment.  Not necessary if you have at
+# least one menu display (which will include a menu_init) first.
+#
+&menu_init();
+
+#
+# Load the template from the data file (created with a text editor)
+# Data entry fields denoted by underscores ("_") or back-slashes ("\");
+#
+&menu_load_template("./template_ezp");
+
+#
+# Set protected fields in this "display only" example.
+#
+$protect[0] = $protect[1] = $protect[2] = $protect[3] = 1;
+$protect[4] = $protect[5] = $protect[6] = $protect[7] = 1;
+
+#
+# Main loop
+#
+while (1) {
+  # Prompt for a /etc/passwd entry to display
+  &top_title("PerlMenu 3.3");
+  &print_nl("  Enter login to display from /etc/passwd",1);
+  &print_nl("  Supply a null value to exit.",2);
+  $prow = $row; $pcol = $col+2;
+  $string = &menu_getstr($prow,$pcol,"Login: ",0,$default,8,0);
+  last if ($string eq "");
+
+  # Display entry (handle errors)
+  if (!&display_entry($string)) {
+    &new_line(1);
+    &pause("  Login \"$string\" not found - Press any key to continue $bell");
+    $default = $string;
+  } else { $default = ""; }
+}
+
+#
+# Clean up and go home.
+#
+&clear();
+&refresh();
+exit(0);
+
+#***********
+# DISPLAY_ENTRY -- Display an entry from the password file
+#
+# Arguments:	Login-id to display
+#
+# Returns:	Boolean flag (0=not there, 1=found it)
+#***********
+sub display_entry {
+  local($seek) = @_;
+  local($found_it) = 0;
+
+  $i = 0;			# Record count
+  open(PASSWD,"/etc/passwd");	# Where the BSD-style "passwd" file is
+  while(<PASSWD>) {
+    $i++;			# Count the record
+    @display_data = split(":");	# Split fields
+    next if ($display_data[0] ne $seek);
+    $found_it = 1;
+    unshift(display_data,$i);	# Insert line number
+
+    # IMPORTANT: Note the use of pointers to arrays here
+    &menu_display_template(*input_data,*display_data,*protect);
+  }
+  close(PASSWD);
+
+  return($found_it);
+}

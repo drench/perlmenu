@@ -1,0 +1,1625 @@
+                                   menu.pl
+                                 Perl Menus
+                                 Version 3.3
+                              February 19, 1996
+
+                               Steven L. Kunz
+                           Networked Applications
+                  Iowa State University Computation Center
+                            Iowa State University
+                                 Ames,  Iowa
+                  
+--------
+Overview
+--------
+
+  The "menu.pl" package is a perl package (built into your perl program with
+  a "require menu.pl" command) that automates curses-based full screen menus
+  and data entry.
+
+  Using three simple calls, any number of items may be selected from a
+  single or multiple-page menu by moving an arrow to the desired item (or
+  directly entering the selection number displayed on the screen).  In
+  addition to simple "single one-shot selection menus", "radio button"  style
+  menus and "multiple-item-selection" menus are provided.  Paging through
+  multiple-page menus is handled automatically.  Menu titles, sub-titles and
+  prompts are supported.  
+
+  Using two simple calls a full-screen data entry template may be loaded
+  and a fully-titled data entry input screen may be created.  Defaults,
+  maximum field lengths, and numeric-only data are supported.
+
+  ---
+
+  The "menu.pl" package uses curses interface routine calls supplied by the
+  "curseperl" package (for Perl4) or the Curses extension (for Perl5).  
+
+  The "curseperl" package is distributed with the normal perl4 distribution in
+  the "usub" directory.  The "curseperl" binary is a complete perl interpreter
+  with the addition of many "curses" routines dealing with screen manipulation
+  (cursor positioning, display of text at the current cursor location, etc). 
+  Applications using "menu.pl" must be constructed to use "curseperl" instead
+  of "perl".  
+
+  The "Curses" extension for Perl5 is maintained by William Setzer (of North
+  Carolina State University).  This package is available via anonymous FTP at: 
+
+    ftp://ftp.ncsu.edu/pub/math/wsetzer/Curses-a8.tar.gz
+
+  When writing perl5/Curses programs make sure you include the following two
+  lines at the start of your program (to initialize the Curses environment
+  correctly): 
+
+    BEGIN { $Curses::OldCurses = 1; }
+    use Curses;
+
+  ---
+
+  For menus, most applications using will use the following three calls
+  (with the "menu_item" routine used multiple times to provide the menu
+  selections) as follows:  
+
+     #!/usr/local/bin/perl5
+     BEGIN { $Curses::OldCurses = 1; }
+     use Curses;
+     ...
+     &menu_init(1,"Select an Animal"); # Init menu
+
+     &menu_item("Collie","dog");       # Add item
+     &menu_item("Shetland","pony");    # Add item
+     &menu_item("Persian","cat");      # Add last item
+
+     $sel = &menu_display("Which animal?"); # Get user selection
+
+     if ($sel eq "%UP%") { ... }
+     if ($sel eq "dog") { ... }
+     ...
+
+  When this code is executed, only the call to "menu_display" will actually 
+  cause the constructed menu to be displayed to the user for selection.
+  The title is centered and displayed at the top of the screen in reverse
+  video.  The selection items are automatically numbered and presented in
+  the order they were added.  The prompt is displayed at the bottom of the
+  screen preceded by an indication of how many of the items in the menu
+  are presented on the current screen ("All" or some percentage).  In the 
+  above example, the menu would look like:
+
+                              Select an Animal
+
+     -> 1) Collie
+        2) Shetland
+        3) Persian
+
+     (All)  Which animal?
+
+  Only one menu may be active at a time.  In applications with "layers" of
+  menus, only the "current layer" menu is maintained in memory.  As you use
+  the "up" function to "pop up" to a previous menu, your application must
+  return to a subroutine (or upper program layer) that reconstructs the menu
+  for that layer of the application and displays it.  Since the lower layer
+  used a "menu_init" to construct that menu, the "upper layer" must reconstruct
+  the entire menu appropriate at that level.  Support is provided (with
+  proper programming of the application) to go directly to the "top" (first)
+  menu and to remember the selection position in a previous menu. 
+
+  ---
+
+  For full-screen data entry, most applications using will use the following
+  two calls: 
+
+     #!/usr/local/bin/perl5
+     BEGIN { $Curses::OldCurses = 1; }
+     use Curses;
+     ...
+     @input_data = (); # Define a place to put the input data
+     ...
+     &menu_load_template("/path/to/template.file"); # Load template
+     &menu_display_template(*input_data);
+
+  When this code is executed, only the call to "menu_display_template" will
+  actually cause the template to be displayed to the user for data entry.  For
+  example, assume the file containing the template looked like:  
+
+                             Address Information
+
+           Name: [_______________________________________________]
+           Addr: [_______________________________________________]
+           City: [______________________] State: [__]  Zip:[_____]
+
+
+  The call to "menu_load_template" would load and parse the template file
+  for locations of text and data fields (data fields denoted by underscores).
+  Optionally, the template can be loaded from a "template array",
+  constructed within the Perl script itself.  Templates stored in arrays
+  (as opposed to files) are loaded with "&menu_load_template_array(...)".
+
+  When "menu_display_template" is called, the user would see the following
+  screen:
+
+                             Address Information
+
+           Name: [                                               ]
+           Addr: [                                               ]
+           City: [                      ] State: [  ]  Zip:[     ]
+
+  Field tabbing and insertion/deletion of text is handled by
+  "menu_display_template" until the user hits "Return".  Data values for each
+  field are returned in $input_data[0] - $input_data[4].  Defaults,
+  numeric-only, blanked, protected, and required fields are supported, along
+  with the ability to parse and control user input while the
+  "menu_display_template" is active via a user exit.  
+
+
+--------------------------
+Official Distribution Site
+--------------------------
+
+  The author's official distribution is available via anonymous FTP from:
+
+    ftp://ftp.iastate.edu/pub/perl/perlmenu.v3.3.tar.Z
+
+  Other sites on the net may offer this package.  New releases are announced
+  in the Usenet Newsgroup "comp.lang.perl.announce".
+
+  PerlMenu also has an official WWW page at:
+
+    http://www.cc.iastate.edu/perlmenu/
+
+
+-------------------------
+Solicitation for Comments
+-------------------------
+
+  If you like "menu.pl" (and "menuutil.pl" and have put it to a useful
+  purpose, I would appreciate a few lines indicating where you are and what
+  you are using it for.  Likewise, if you have found a bug, documentation
+  problem, or would really like to see a certain feature, feel free to let
+  me know about those, too.  Send your e-mail cheers/jeers to
+  "skunz@iastate.edu".  Lately I have been very far behind on responding
+  to problem-questions such as "how do I make it do such-and-such", since
+  other duties which my superiors deem more important (!) call.  However,
+  all suggestions, comments, and (if I am lucky) patches ARE saved.
+  I eventually get around to responding when some free time pops up.
+
+
+--------------
+Card of Thanks
+--------------
+
+  A big "thank you" to the following people who have taken time to notice
+  some improvements that could be made in the menu.pl code and mail them
+  to me.  Specifically:
+
+  - Greg Kresko (National Research Council Canada)
+    Found some problems with "endwin" statement placement (or lack thereof). 
+    Incorporated in the version 2.1 release.
+
+  - Tim Goodwin
+    Found a bug in the order of calls to "menu_exit_routine" and
+    "menu_return_prep" when "quit" was processed.  Incorporated into the
+    version 2.3 release.
+
+  - Steve Mitchell (CSU/Fresno)
+    Found a bug in processing of "normal" applications (ones that do not call
+    "menu_curses_application").  He suggested a fix for problems encountered
+    on Sun and other System V systems relating to multiple calls to
+    "initscr".  Incorporated into the version 2.3 release.
+
+  - Ian Phillipps (Pipex)
+    Found a bug in the return value from "menu_init".  It returned one too
+    few for the number of items in the menu.  Incorporated into the version 
+    3.0 release.
+
+  - Christopher Candreva (WestNet Internet Services of Westchester)
+    Lots of improvements.  Added menu_getstr defaults, max-lengths,
+    and "noshow" support.  Contributed "centered menu" code.  Provided
+    support code for template processing (menu_setexit, menu_getexit).
+    Added "pre-selected" option to "menu_init" call.  Provided idea
+    for "menu_paint_file" loading code.
+
+  - Jim Sumrall (Intel Corporation)
+    Fixed some problems relating to Perl5 (subroutine calls with no parms
+    called as "&rtn;" instead of "&rtn();").  Also added commented code for
+    systems that use "tigetstr" (terminfo data) instead of "getcap" (termcap).
+
+  - William Setzer (North Carolina State University)
+    Mr. Setzer is the author of the Curses extension for Perl5 and provided
+    valuable assistance in getting this package to work with his.
+
+  - Alan Cunningham (NASA Spacelink Project)
+    Alan supplied valuable input into the "real world" needs of the template
+    data input facility.  The "menu_display_template" user exit routines
+    were developed with his feedback relating to an actual application.
+
+  - Charles F. Randall (once with Iowa State University, ISUCC User Services,
+    now with Des Moines Area Community College).
+    Charles ("Randy") supplied the code for the "emacs-similar" cursor
+    movement/cut-paste control sequences to menu_getstr and
+    menu_display_template.
+
+
+-------------------------------------
+Initializing a new menu - "menu_init"
+-------------------------------------
+
+  Routine:      menu_init
+
+  Syntax:       &menu_init(num_flag,"title string",top_flag,"sub-title str",
+                           "bottom-title str","item_help_routine_name");
+
+  Input args:   - Boolean flag (0=unnumbered menu, 1=numbered menu).
+                  Required, no default.
+                - Title string (string centered at top of menu).
+                  Required, no default.
+                - Boolean flag (0=non-top menu, 1=top menu).
+                  Optional, defaults to zero.
+                - Top Sub-title(s) string
+                  Optional, defaults to none.
+                - Bottom title(s) string
+                  Optional, defaults to none.
+                - Item-Help routine name string
+                  Optional, defaults to none.
+
+  Returns:      Window value from "initscr" call.
+
+  The "menu_init" call resets the menu array and indexes.  It must be called
+  to reset/clear any old menu.  The first parameter is a boolean flag
+  indicating whether or not the menu should be numbered and have a selection
+  arrow "->" provided (a non-zero value indicates a numbered menu).  By
+  default, the "title string" is centered at the top of the screen and
+  presented in "standout" rendition (usually reverse video or bold).  If the
+  first character of the title is a dash ("-") then the title will be
+  presented in "normal" rendition ("standout" will be suppressed).  Title
+  text that exceeds the width of the screen is automatically truncated on
+  the right to fit the available width.
+
+  The "top flag" is used to provide support for "top level" menus, discussed
+  further in a later section of this document.
+
+  The "sub-title string" is used to supply optional sub-title lines. 
+  Formatting is the similar to the main title string (centered, with a leading
+  dash indicating normal rendition).  However, a second format character is
+  honored to indicate justification of the sub-title text on the screen.  A
+  "<" indicates "left-justified" and a ">" indicates "right-justified".  This
+  character can be combined with the "-" (indicating "normal rendition")
+  provided it FOLLOWS the dash.  Multiple sub-titles (each with it's own
+  leading formatting characters) can be specified on one parameter if they are
+  separated by "newlines" ("\n").  An example of a menu with three sub-titles
+  would be:  
+
+    &menu_init(1,"Menu with sub-titles",0,
+            "Centered\n-<Left-justified\n>Right-justified");
+
+  Here the sub-title "Centered" will appear in "standout rendition" (no
+  leading "-") centered on the second line of the menu (no "<" or ">").  The
+  sub-title "Left-justified" will appear left-justified on the third menu line
+  in "normal" rendition (due to the leading "-<"). The sub-title
+  "Right-justified" will appear right-justified on the fourth menu line in
+  "standout" rendition (no leading "-", but has ">").  Note that the "top
+  menu" flat (the "0" as the third parameter in the "menu_init" call list) is
+  required as a placeholder for the menu sub-titles).  
+
+  The "bottom title string" is used to supply optional bottom title lines.
+  This string is formatted exactly like top sub-title lines (using the same
+  rendition, justification and new-line characters).  Bottom titles appear
+  between the last line of the menu and the menu "prompt" line (the bottom
+  line on the screen).
+
+  Both top and bottom title strings can be loaded from a file using the
+  "menu_paint_file" call (refer to the section on the "menu_paint_file"
+  routine. 
+
+  Top sub-title and bottom title strings can be loaded dynamically (at 
+  menu display time) by specifying a routine call (which returns the title
+  string) instead of the string itself.  A routine is specified by supplying
+  a string with "&" as the first character immediately followed by the
+  routine name (same syntax as a routine call).  In the above sub-title
+  example, the following could have been used instead:
+
+    [...]
+    &menu_init(1,"Menu with sub-titles",0,"&make_subtitle");
+    [...]
+
+    sub make_subtitle {
+      local($title);
+      $title = "Centered\n";
+      $title .= "-<Left-justified\n";
+      $title .= ">Right-justified";
+      return($title);
+    }
+
+  The "item_help_routine_name" string is the name of a subroutine that you
+  are providing in your main module to provide help text if the user presses
+  "?" with the arrow ("->") in front of the item.  One routine name can handle
+  all items in a menu. This is because your routine is called with two
+  parameters - the "selection text" and the "action_text" strings from the
+  "menu_item" calls that created the menu.  So, assuming you supplied an
+  "item_help_routine_name" of "main_menu_help" on your "menu_init" call,
+  your item help routine would look something like:
+
+    sub main_menu_help {
+      local($selection_text,$action_string) = @_; # Pick up the two parms
+      if ($action_string eq "item1") { # Action text for item one
+	# Display whatever help text for the first item
+      }
+      elsif ($action_string eq "item2") { # Action text for item two
+	# Display whatever help text for the second item
+      }
+      &refresh();
+      $ch = &getch(); # Pause until keypress
+    }
+
+  Help on individual items is activated with a question-mark ("?") hot-key.
+  Generic help on menus in general is activated with a "h" (or "H") hot-key.
+  The default menu prompt (and generic menu help screen) automatically
+  indicate if "item-help" is available on the current menu.  For backward
+  compatibility with previous versions, if no item help routine is provided,
+  the generic menu help screen (defining what all the current "hot-keys" do)
+  is provided when "?" is pressed.
+
+
+------------------------------------
+Adding items to a menu - "menu_item"
+------------------------------------
+
+  Routine:      menu_item
+
+  Syntax:       &menu_item("Selection text","action_text",preselection_mode);
+
+  Input args:   - Selection text (the string the user sees).
+                  Required, no default.
+                - Action text (string returned if item is selected).
+                  Optional. Defaults to "".
+                - Pre-selection mode
+                     0 = Not selected, can be toggled
+                     1 = Selected, can be toggled
+                    -1 = Locked out of selection process (but displayed)
+                  Optional, defaults to "not selected/can be selected".
+
+  Returns:      Current number of items in the menu.
+
+  The "menu_item" call provides selection text (what the user sees on the
+  screen) and "action_text" (not seen - but returned if that item is
+  selected).  There is no practical limit (other than memory or maximum
+  array index size) on the number of items in a menu.  The items are
+  presented in the order you add them and the top (first) item is always
+  the default (except when using the "latched" menu support outlined in
+  a later section).  Some "menu_display_" calls ("menu_display_radio" and
+  "menu_display_mult") will automatically add a top item selection for you.
+  Refer to those commands for more information.  Selection text that exceeds
+  the width of the terminal is automatically truncated on the right by the
+  "menu_item" call.  The "action_text" may be a null string (in which case a
+  null string is returned upon selection).
+
+  The optional pre-selection flag is useful only with "multiple selection
+  menus" (calls to "menu_display_mult").  The default value (zero) indicates
+  the item is available for selection.  A "positive one" value indicates that
+  the item is to be "pre-selected" (with an initial "[X]" indication) which
+  the user may toggle off/on).  
+
+  A preselection value of "negative one" value is used to indicate a "locked
+  out" selection (with an "[-]" indication) which the user cannot change. 
+  Locked out selections are merely placeholders on the screen and have no
+  values returned (and cannot have their lockout indication cleared).  This is
+  useful for multiple menu-selection calls in which items selected for a list
+  in a previous step should not be selected again.  An example would be during
+  the composition of a mail message where addresses selected for primary
+  recipients should not be selected again for carbon-copies (but an indication
+  that the address is already selected is desired). 
+
+
+-----------------------------------------------------
+Simple display/selection from a menu - "menu_display"
+-----------------------------------------------------
+
+  Routine:      menu_display
+
+  Syntax:       $sel_var = &menu_display("Prompt text",$arrow_loc,$top_item);
+
+  Input args:   - Prompt text (string for bottom line).
+                  Optional, defaults appropriate for menu.
+                - Item line on screen to place the arrow.
+                  Optional, defaults to zero (the first item).
+                - Index of item to place at top of screen.
+                  Optional, defaults to zero (the first item).
+
+  Returns:      "<action-text>" or "%UP%" or "%EMPTY%"
+
+  The "menu_display" call is the only call that actually writes data on the
+  screen.  When it returns you have one of the following strings:
+
+    "%UP%"          -- indicating the user did not select anything but 
+                       pressed "u" (or possibly "t" - for "top menu", see
+                       below) to exit the menu.
+
+    "%EMPTY%"       -- indicating no calls were made to "menu_item" since 
+                       the last "menu_init" call.
+
+    "<action-text>" -- one of the selection-action strings given on a 
+                       "menu_item" call.  
+
+  You can either provide your own prompt as a call parameter to
+  "menu_display"  or you can provide a null string (&menu_display("")) in
+  which an automatic prompt is provided.  All paging functions are handled
+  within the call to "menu_display" automatically.  The last two arguments
+  are used for "latched" menus, discussed in a later section.
+
+  Support is provided for just simply typing the selection number of the
+  item on the screen - you do not have to move the selection arrow to the item
+  if you prefer to type the number (followed by "return").  The arrow ("->")
+  displayed on the screen will automatically jump to the selection that is the
+  "best fit" for what is typed so far.  For example, if items 1-20 are
+  currently on the screen, pressing a "2" will cause the arrow to jump to the
+  "2)" selection.  Typing "0" (to indicate "20") causes the arrow to next jump
+  to the "20)" selection.  A "return" key actually activates the selection.  A
+  "delete" or "backspace" key (or any cursor-movement key) clears the "direct
+  entry" selection process at any time before "return" is pressed.  
+
+  One final note.  The call to "menu_display" will ALWAYS turn back on echo
+  - so if you really want it off you will have to call "noecho" again after 
+  each call to "menu_display". 
+
+
+----------------------------------------------------------------------
+Displaying/selecting from a "radio button" menu - "menu_display_radio"
+----------------------------------------------------------------------
+
+  Routine:      menu_display_radio
+
+  Syntax:       $sel_var = &menu_display_radio("Prompt","current","Accept");
+
+  Input args:   - Prompt text (string for bottom line).
+                  Optional, defaults appropriate for menu.
+                - Current "action-text" deemed as "set".  Any menu-item
+                  with this "action-text" will have the selection box X'd.
+                  Optional, if not set no selections will be set at start.
+                - Text supplied for first item (which indicates selections
+                  are done.
+                  Optional, defaults to "(Accept this setting)".
+
+  Returns:      "<action-text>" or "%UP%"
+
+  The "menu_display_radio" call is similar to the "menu_display" call, 
+  except that it provides a "pushbutton radio" style of menu display which
+  indicates the current setting (selection) in the menu while providing an
+  opportunity to change it.  A "radio button" menu uses the same "menu_init"
+  and "menu_item" calls as any other menu.  However, the "menu_display_radio"
+  call produces a menu similar to the following example:
+
+                           Delete Confirmation
+
+      ->   1) (Accept this setting)
+           2) [X] Ask permission first
+           3) [ ] Just do it
+
+      (All) h)elp q)uit u)p t)op b)egin e)nd r)efresh
+
+  Here a "button box" ("[ ]" is presented in front of the selection text
+  indicating the current setting/selection.  The user is given the
+  opportunity to select another item (moving the "X" from box to box).
+  When the desired setting/selection is set, item 1 (which is automatically
+  provided for you by the "menu_display_radio" call) is selected and the
+  menu function returns to the caller.  You can override the default text
+  for the item 1 selection on the "menu_display_radio" call.
+ 
+  When it returns you have one of the following strings:
+
+    "%UP%"          -- indicating the user did not select anything but 
+                       pressed "u" (or possibly "t" - for "top menu", see
+                       below) to exit the menu.
+
+    "%EMPTY%"       -- indicating no calls were made to "menu_item" since 
+                       the last "menu_init" call.
+
+    "<action-text>" -- one of the selection-action strings given on a 
+                       "menu_item" call.  
+
+  You can either provide your own prompt as a call parameter to
+  "menu_display_radio"  or you can provide a null string 
+  (&menu_display_radio("",...)) in which an automatic prompt is provided.
+  All paging functions are handled within the call to "menu_display_radio"
+  automatically.
+
+
+-------------------------------------------------------------------------
+Displaying/selecting from a multiple selection menu - "menu_display_mult"
+-------------------------------------------------------------------------
+
+  Routine:      menu_display_mult
+
+  Syntax:       $sel = &menu_display_mult("Prompt text","Done text");
+
+  Input args:   - Prompt text (string for bottom line).
+                  Optional, defaults appropriate for menu.
+                - Text supplied for first item (which indicates selections
+                  are done).
+                  Optional, defaults to "(Done with selections)".
+
+  Returns:      "<action-text>" or "%UP%" or "%NONE%"
+
+  The "menu_display_mult" call is similar to the "menu_display" call, 
+  except that it provides a multiple-selection style of menu display which
+  returns the "<action-text>" values in comma-separated string (instead of a
+  single value variable).  A multiple-selection menu uses the same
+  "menu_init" and "menu_item" calls as any other menu.  However, the
+  "menu_display_mult" call produces a menu similar to the following example:
+
+                           Select one or more items
+
+      ->   1) (Done with selections)
+           2) [X] Cat
+           3) [ ] Dog
+           4) [X] Goldfish
+           5) [ ] Mouse 
+
+      (All) h)elp q)uit u)p a)ll m)atch c)lear n)ext-pg p)rev-pg b)egin e)nd
+
+  In this type of menu display the user can toggle selections on or off
+  until the desired set is chosen.  Indicating "(Done with selections)"
+  results in the multiple-selection string being returned to the caller.
+  When it returns you have one of the following strings:
+
+    "%UP%"          -- indicating the user pressed "u" (or possibly 
+                       "t" - for "top menu", see below) to exit the menu.
+                       Note that even if they HAD selected something, 
+                       returning from the menu with a "u" discards the
+                       selections.
+
+    "%NONE%"        -- indicating no items were selected by the user
+                       the last "menu_init" call.
+
+    "<action-text>" -- one or more of the selection-action strings (comma
+                       separated) given on a "menu_item" call.  
+
+
+  Typically, this string will be broken by the caller into individual
+  items for processing by perl code similar to the following: 
+
+      $sel = &menu_display_mult("");
+      if ($sel eq "%UP%") { return; }
+      if ($sel eq "%NONE%") {
+        print "(You didn't select anything)\n";
+      } else {
+        print "You selected the following:\n";
+        split(/[,]/,$sel);  # Put return in @_
+        foreach (@_) { print "  $_\n"; }
+      }
+
+  Note that you should normally be careful not to use commas on the "action
+  text" portions of menu_item calls (UNLESS you know you want one item to
+  be parsed out as multiple selections - a subtle "feature").
+
+  Certain items in a multiple-selection menu may be "pre-selected"
+  (indicated as selected with "[X]") on the initial menu display if the
+  menu was built with a "menu_item" call with the "pre-selection" option
+  set.
+
+
+--------------------
+"Top" Menu Support
+--------------------
+
+  There is limited support for "top" menus.  By following a careful program
+  structure you can allow the user to type a "t" at any menu display and have
+  the next menu presented be the "top" (first) menu presented.  This provides
+  a convenient means for the user to jump to the top of a multiple-level menu
+  structure from several menu-levels down. 
+
+  Since there is only one menu active at a time, pressing "t" to indicate
+  the "top" menu merely generates an "%UP%" return from the current menu
+  (refer to the "menu_display" call).  However, top's "%UP%" return is
+  different from a normal "u" up-action in that an internal flag is set so
+  that all subsequent calls to ANY "menu_display" immediately return with an
+  "%UP%" selection.  This action continues until a menu is displayed that was
+  initialized with a special flag in the "menu_init" call that indicates it is
+  the "top" menu.  Once a "menu_display" is called for a menu that has this
+  special "menu_init" call, the "automatic %UP% return" stops and the "top
+  menu" is displayed.  This special "top menu" is initialized as follows:  
+
+      &menu_init(num_flag,"title string",1); # A "top" menu_init call
+
+  The third parameter (a "1") indicates this is the "top" menu.
+
+  The "top" menu support requires special care in programming.  With
+  careless programming you could enter a loop if a "t" was pressed and the
+  Perl program provided no "top menu_init" call.  To provide some level
+  of protection, the "t" menu hot-key and "top" support is disabled
+  automatically UNLESS the FIRST "menu_init" call is also a "top menu_init"
+  call (indicating the software was programmed with "top" menus in mind). 
+
+  The "demotop" program distributed with this release of "menu.pl" provides
+  an example of correct usage of the "top menu" features.   
+
+
+--------------------
+"Latched" Menus
+--------------------
+
+"Latched" menu support offers the ability to remember where you were in a
+menu when it is re-displayed later.  This is often useful in traversing
+a menu-tree down and then returning to previous menus (and selection
+locations) when "popping back up" the tree (with the "up" hot-key).  The
+only action necessary to remember position is the addition to two parameters
+on the "menu_display" call as follows:
+
+     $sel_var = &menu_display("Prompt text",$arrow_loc_var,$top_item_var);
+
+These two values indicate the location of the arrow line on the menu screen
+and the index number of the top "menu_item" on the menu screen.  If you want
+the first item the first time, these values should both be initialized to
+zero (first item on the first page).  This will generate the same action as
+if they were not specified - the default "non-latched" call.  These two
+optional parameters also are used to RETURN the value of the top item on
+a menu-page and arrow location AFTER the user selected something (and the
+"menu_display" routine returns).  If you do not modify the two parameters,
+rebuild the menu the same way, and call "menu_display" supplying the returned
+values, the menu will be displayed in the original "selection" location.
+
+By letting "menu_display" store selection locations before moving to a lower
+level in your "menu-tree" (via a subroutine call to another menu-generator),
+a return from the lower level can regenerate any given levels menu and
+reposition the selection location automatically.  Make sure you store your
+"latch" variables in "local" storage (one set for each menu-generator
+routine that has a "menu_display" call).
+
+One final note - the "menu_display" routine will check and automatically
+adjust the values to meet current menu limits.  For example, if your menus
+are "dynamic" and items "disappeared" (making your last latch position off
+the end of the reconstructed menu), the "menu_display" routine will adjust
+to point to the the last item in the menu (adjusting the "top item" as
+needed). 
+ 
+
+-------------------------------------
+Other Menu-Related "menu.pl" Routines
+-------------------------------------
+
+  --------
+  Routine:      menu_curses_application
+
+  Syntax:       &menu_curses_application(initscr_window);
+
+  Input args:   Window value returned from your call to "initscr"
+
+  Returns:      Main window value.
+
+  COMPATIBILITY NOTE:
+  Prior to version 3.0 of menu.pl this routine did not require the passing
+  of the window value returned from your call to "initscr".  As of version
+  3.0 you SHOULD provide the window value.  If menu.pl has not gotten the
+  value of the main window itself, it must be told what you are using.
+  If you do not pass the "initscr_window" value, this routine will perform
+  an "initscr" call to make sure it has a "stdscr" window value.
+
+  It is assumed that the application calling the menu routines is not a
+  "Perl+curses" application (i.e. it is a "stock" perl script except for calls
+  to "menu.pl" routines).  However, if you are writing an "all-curses"
+  application (calling curses functions from your routines) you should call
+  "initscr" (to init the curses environment) and pass the value returned to
+  "menu_curses_application".  This set of actions need only be done ONCE (at
+  the beginning of our program).  The call to "menu_curses_application" saves
+  the window value for subsequent use and sets a flag so that the "initscr"
+  and "endwin" calls are NOT done by the menu.pl package calls. You should
+  make sure you issue an "endwin" call prior to exiting. 
+
+  On some systems it has been reported that there is "screen flicker" 
+  between menu calls.  The screen may appear to clear, flash an old screen
+  briefly, and then paint the new menu.  This may be due to the fact that
+  menu.pl by default will issue an "initscr" and "endwin" call around every
+  menu display.  If this causes "screen flicker" on your system, make sure you
+  code your application with a call to "initscr" and pass the value to the
+  main window as follows:  
+
+      #require "menu.pl";
+   
+      $window = &initscr();
+      &menu_curses_application($window);
+      ...
+      (the rest of your program)
+      ...
+      &endwin();
+      exit(0);
+
+  This technique will probably not help things on some Sun systems (which
+  appear to have shortcomings in their "curses" library routines).
+
+  --------
+  Routine:      menu_getstr
+
+  Syntax:       $str_var = &menu_getstr(row,col,"prompt text",clear,
+                                        "Default string",max_len,hidden,
+                                        data_type,window);
+
+  Input args:   - Row and column for input of data. (Required)
+                - Prompt text
+                  Optional.  Defaults to "no prompt".
+                - Boolean flag (0=no-clear, 1=clear-after-user-entry)
+                  Optional. Defaults to "no-clear".
+                - Default-value string.
+                  Optional.  Defaults to "no default value".
+                - Maximum string length.
+                  Optional.  Defaults to right edge of screen.
+                - Boolean flag (0=show, 1=hidden).
+                  Optional.  Defaults to "show".
+                - Data type (0=alpha-numeric, 1=numeric).
+                  Optional.  Defaults to alpha-numeric.
+                - Window (used mainly by template routines).
+                  Optional.  Defaults to base screen window.
+
+  Returns:      String (may be null)
+                
+  This is a utility routine written for "match string" prompting (on
+  multiple-selection menus) and data field input (on menu template input) that
+  proves useful in any perl-based curses application.  The row and column of a
+  position on the screen where you want to input text is supplied (with an
+  optional prompt).  Character entry is allowed from the right edge of the
+  prompt to the right edge of the screen (or for the maximum number of
+  characters allowed).  The left and right cursor keys may be used to move
+  within text already typed in, with the cursor location being an
+  "insert/delete" point.  This allows for C-shell-like data entry.  
+
+  A special case is provided for "single character" string entry (calling
+  "menu_getstr" with a maximum string length of one).  Only in this case
+  will "menu_getstr" function in "overstrike" mode.  The user does not need
+  to delete a character first to replace it with another.  This is useful
+  for one-character fields such as "Is this correct? [Y]".
+ 
+  A few "emacs-similar" control sequences are available to the user when
+  they are editing within a "menu_getstr" call as follows ("^" indicates
+  pressing the "CONTROL/CTRL" key, "^A" meaning "CNTL-A", etc.):
+
+    ^A - Move to the first character
+    ^E - Move to after the last character
+    ^F - Move to the next character (same as "right cursor")
+    ^N - Move to the next field (same as "tab")
+    ^P - Move to the previous field
+    ^B - Move to the previous character (same as "left cursor")
+    ^D - Delete the character at the cursor (shifting in any text at the right)
+    ^K - Delete (and "cut" into paste-buffer) text to the right (emacs "Kill")
+    ^U - Paste text in paste-buffer at the cursor (emacs "Yank")
+
+  Note that the "paste text" function is NOT the same control sequence used by
+  emacs (which uses "^Y").  This will be confusing to emacs users, but
+  currently the "^Y" function is processed as "terminal STOP". 
+
+  The call to "menu_getstr" will ALWAYS turn back on echo - so if you
+  really want it off you will have to call "noecho" again after each call
+  to "menu_getstr". 
+
+  --------
+  Routine:      menu_help_routine
+
+  Syntax:       &menu_help_routine("routine_name");
+
+  Input args:   String with name of routine to be called.
+                Required, no default (Null value of "" allowed).
+
+  Returns:      Nothing.
+
+  The menu routines have a default generic help screen that is displayed
+  if the user presses "h" while a menu is displayed.  This screen explains
+  how to use the menu and the current active "hot-keys".  Calling
+  "&menu_help_routine("rtn_name");" will cause the specified routine to be
+  called instead on the default routine.  Providing a new generic help routine
+  applies to ALL menus from that point on.  You may revert back to the
+  default generic help screen at any time by supplying a null value for
+  the "routine_name" in the call (&menu_help_routine("");).
+   
+  --------
+  Routine:      menu_paint_file
+
+  Syntax:       &menu_paint_file("/filename/path",top_bottom_flag);
+
+  Input args:   - Path to file to use as headers
+                  Required.
+                - Position flag (0=top sub-titles, 1=bottom titles)
+                  Optional.  Defaults to "top sub-titles".
+
+  Returns:      0=Success, 1=Cannot open file.
+
+  This is a "shorthand" method of load large blocks of text to be used as
+  menu sub-titles and/or bottom titles.  Format each line of text with the
+  same two formatting characters as specified on titles in the "menu_init"
+  call.  If not formatting characters are present on a line the default
+  action (centered, standout rendition) will be used.  If titles are
+  specified on both the "menu_init" call AND a subsequent "menu_paint_file"
+  call, the "menu_paint_file" will replace the "menu_init" titles.
+
+  The "menu_paint_file" call must appear AFTER the "menu_init" call and
+  BEFORE the "menu_display" call.  A "menu_init" call will erase any
+  previously loaded titles.
+
+  --------
+  Routine:      menu_prefs
+
+  Syntax:       &menu_prefs(centered_menus,gopher_like,disable_quit);
+
+  Input args:   - Flag indicating centered menus are desired.
+                - Flag indicating more gopher-like arrow functions desired.
+                - Flag indicating "q" ("quit") is not a valid hot-key.
+                - String with prompt to use in place of the "Do you really
+                  want to quit?" prompt.  If a null string is supplied, the
+                  default string will be used.
+                - A single character string which can be "y", "Y", "n", or
+                  "N".  This value is used as the default response on the
+                  "quit" prompt.  Any value other than those listed results
+                  in the default reverting to "y".
+
+  Returns:      Nothing.
+
+  If the "centered_menus" flag is non-zero all menus will be centered on the
+  screen.
+
+  If the "gopher_like" flag is non-zero the left-arrow key will act as a "u"
+  ("up") hot-key and the right arrow key will act as a "return" hot-key. 
+  Normal action is that left-arrow acts like an up-arrow and the right-arrow
+  acts like a down-arrow.  In addition, the scrolling action of menus when the
+  arrow keys are used to move up from the top item or down from the bottom
+  item changes to a more "gopher-like" paging action.  Wrapping from the first
+  page to the last page is also activated.
+
+  If the "disable_quit" flag is non-zero the "quit" hot-key is disabled. 
+  Pressing "q" will do nothing (and the "quit" function will not appear on the
+  help screen for menus).
+
+  If "menu_prefs" is never called the following defaults are set:
+
+    - Left-justified (non-centered) menus,
+    - Non-gopher-like right/left arrow keys
+    - "Quit" is a valid menu hot-key.
+
+  These defaults match previous releases of the menu.pl system. 
+
+  --------
+  Routine:      menu_quit_routine
+
+  Syntax:       &menu_quit_routine("routine_name");
+
+  Input args:   String with name of routine to be called.
+                Required, no default.
+
+  Returns:      Nothing.
+
+  The menu routines will process a "q" for "quit" locally.  In other words,
+  if the user presses "q" while a menu is displayed (and responds to the
+  "Do you really want to quit?" prompt with a "y") the perl program will
+  immediately exit.  However, support is provided for a "user" exit that
+  will be called just before dropping out the program (to perform any
+  "cleanup" duties).  Calling "&menu_quit_routine("rtn_name");" will set
+  the exit routine.
+   
+  --------
+  Routine:      menu_setexit
+                menu_getexit
+
+  Syntax:       &menu_setexit(@seq-array);
+                $val = &menu_getexit;
+
+  Input args:   menu_setexit - Array of exit sequences to look for.
+                menu_getexit - None.
+                
+  Returns:      menu_getexit returns the last exit sequence (so you can
+                decide what to do based on what it was)
+
+  These routines are used to provide a "hook" into the menu_display and
+  menu_getstr routines to provide a means of detecting more than one
+  keystroke (or key sequence) to cause a return.  This is used primarily
+  within the menu_display_template routine - but you may have other 
+  uses for it.  For example, the following could be used to allow the
+  "Tab" or "?" keys to exit a menu (or menu_getstr):
+
+      $exit_array[0] = "\t";
+      $exit_array[1] = "?";
+      &menu_setexit(@exit_array);
+
+  After the menu returns you would use "menu_getexit" to retrieve the type
+  of sequence that caused the exit and process accordingly.
+
+  --------
+  Routine:      menu_shell_command
+
+  Syntax:       &menu_shell_command("shell-path");
+
+  Input args:   String with command to issue to spawn a shell ("/bin/csh",
+                for example).  If null, ability to use "!" from a menu to
+                get a command prompt is disabled (the default condition).
+                
+  Returns:      Nothing.
+
+  If you want to give your users the ability to suspend the perl menu
+  program at any menu and spawn off a subshell (and get a command prompt),
+  you can issue this call with the shell-path as the argument.  When any
+  menu is displayed, a user can press the exclamation point ("!") and get a
+  command prompt.  Exiting the shell re-displays the menu exited from and
+  continues processing.  Many systems have an environment variable indicating
+  the current shell such as "SHELL".  If so, the best way to activate this
+  ability is to issue a command such as "&menu_shell_command($ENV{"SHELL"});"
+  early in the program.  Shell-escaping can be disabled by issuing the
+  command with a null string as the argument (reverting to the default mode).
+
+
+-----------------------------------
+Templates -- Full Screen Data Entry
+-----------------------------------
+
+  The menu.pl package contains a facility to allow data-entry from formatted
+  multiple-field full-screen definitions.  Definition of the screens is
+  extremely simple and can be done with any full-screen text editor.  In
+  essence, you edit the screen exactly as you want it to look (including
+  spacing and titles) and denote data entry fields with special characters.
+  Once a data-entry template file is defined two menu calls are used - one to
+  load the template and a second to perform actual data entry.  
+
+
+-------------------
+Defining a template
+-------------------
+
+  A template is defined by editing a file (called the "template file") using
+  any text editor (a full-screen editor is best since you can see what the
+  final result is like while you are editing the file).  Any text is presented
+  on the data-entry screen exactly as it appears in the file (on the same row
+  and column).  Data entry fields are denoted by the following special 
+  characters:
+
+    underscore ("_")  --  Alpha-numeric data
+    back-slash ("\")  --  Numeric-only data
+    caret      ("^")  --  Hidden (password-style) data
+
+  The data entry "field characters" cannot be redefined for use on screen
+  headings (but you can still place them on the screen with a "template
+  overlay", discussed later).  Blanks (or other characters) are used to denote
+  field separators.  There is no software-imposed limit on the number of
+  fields (unless you have memory constraints).  
+
+  The following is an example of a template for name/address/phone
+  information: 
+
+    Address Data Example                    Record # ___
+
+    Name: [_____________________________________________]
+    Addr: [_____________________________________________]
+    City: [__________________]  State: [__]  Zip: [\\\\\] 
+
+    Phone: (\\\) \\\-\\\\            Password: [^^^^^^^^]
+
+    Enter all information available.
+    Edit fields with left/right arrow keys or "delete".
+    Switch fields with "Tab" or up/down arrow keys.
+    Indicate completion by pressing "Return".
+
+  In this example the "Zip" and "Phone" fields are numeric.  The "Password" 
+  field is "hidden" (entered text appears on the screen as "*"s).  All
+  remaining fields are alpha-numeric.  When the template is displayed the
+  screen is cleared and the data-entry template is displayed "as-is" EXCEPT
+  that the data-entry field characters (underscores, back-slashes, and carets)
+  are replaced by spaces.  The user is only allowed to enter data (and tab
+  between) the data-entry areas.  Note that the brackets are useful to delimit
+  the bounds of the data areas to the user but are not necessary (as apparent
+  in the "Phone" field).  Also note that the "Phone" field is actually three
+  separate fields which must be re-assembled (if required) later.  This
+  template could have also been written as "Phone: ____________" for less
+  strict formatting (losing some validation in the process).
+
+  You should make sure that when formatting a template your full screen
+  editor does not rely on tabs for the positioning of text on the page.  The
+  template processing routines will not process tabs in the template file
+  properly.  Make sure all tabs are expanded to blanks by your editor.
+ 
+
+---------------------------------------------
+Loading a new template - "menu_load_template"
+---------------------------------------------
+
+  Routine:      menu_load_template
+
+  Syntax:       &menu_load_template("/filename/path");
+
+  Input args:   Path to the template file.
+
+  Returns:      0=success, 1=Cannot open file
+
+  This routine opens the template file, processes it (detecting the location
+  of the data-entry fields), and returns.  All template overlays (normal and
+  "sticky" are cleared.  No data is displayed on the screen.  If you are
+  performing multiple entry tasks (i.e. looping while calling
+  "menu_display_template" many times, using the same template) you need only
+  call "menu_load_template" once.  Multiple calls to this routine are only
+  needed if you want to switch templates. 
+
+  It is not possible to denote "standout" rendition fields in a template
+  file.  However, you may leave blank areas and use a "template overlay" to
+  place text in them later with "standout" rendition.  Refer to the
+  "menu_template_overlay" routine section for more details.  
+
+
+-----------------------------------------------------------------
+Loading a new template from an array - "menu_load_template_array"
+-----------------------------------------------------------------
+
+  Routine:      menu_load_template_array
+
+  Syntax:       &menu_load_template(@template_array);
+
+  Input args:   Array which defines the template.
+
+  Returns:      0=success
+
+  In some cases, it is more convenient to keep the templates in the source
+  file, instead of using separate template files.  A template could for
+  instance be declared by a "here-is" string, or it could be built at
+  run-time.
+
+  This routine uses an array for the template, one element in the array
+  corresponding to one line of output in the template, and otherwise
+  processes it exactly as "menu_load_template".
+
+  An example:
+
+  &menu_load_template_array(split("\n", <<'END_OF_TEMPLATE'));
+
+                             Address Information
+
+           Name: [_______________________________________________]
+           Addr: [_______________________________________________]
+           City: [______________________] State: [__]  Zip:[_____]
+  END_OF_TEMPLATE
+
+
+------------------------------------------------------------------------
+Getting user input from a full-screen template - "menu_display_template"
+------------------------------------------------------------------------
+
+  Routine:      menu_display_template
+
+  Syntax:       &menu_display_template(*entered_data,*defaults,*protected,
+                                       "exit_routine",*required);
+
+  Input args:   - Pointer to array to load with user data.
+                  Required.
+                - Pointer to array containing defaults for all fields.
+                  Optional (defaults to "no defaults").
+                - Pointer to array containing protection status for all fields.
+                  Optional (defaults to "all unprotected").
+                - Name of exit routine to call between field tabs and on
+                  signal of completion ("Return");.
+                  Optional (defaults to no exit routine).
+                - Pointer to array containing required-field status for all
+                  fields.
+                  Optional (defaults to "none required").
+
+  Returns:      0=Success (entered_data array loaded), 1=No template loaded
+
+  This routine uses a previously-loaded template (loaded with the
+  "menu_load_template" call) and presents the user with a formatted 
+  multiple data field screen.  The user may use the Tab or down-arrow
+  keys to move forward to the next field on the screen.  Moving to a
+  previous field is done with the "up-arrow" key.  When within a field
+  normal editing can be performed as with any "menu_getstr" call.  The
+  character insertion/deletion point can be changed with the left/right
+  arrow keys.  Maximum lengths of fields are enforced.  If a field is
+  denoted in the template as "numeric only" the terminal will sound a 
+  bell if a non-numeric character struck.
+
+  It is important to note that the first three (and fifth) parameters to this
+  routine are POINTERS, and are not arrays "passed by value".  Declare the
+  arrays in your own program ("@entered_data = ();") and use the pointer in
+  your call to "menu_display_template" as in:
+
+    &menu_display_template(*entered_data);
+
+  This routine processes all fields in row/column order and returns the
+  values after user entry (i.e. after they have entered as much data as
+  they choose in all fields) and press "Return".  The values are returned
+  in the "entered_data" array.  The first field is in array position
+  $entered_data[0], the second in $entered_data[1], etc.  If the user
+  entered no data in a field (and there was not default) the value in the
+  array will be null ("").
+
+  Defaults are supplied using the "defaults" array (of string values).
+  Supply the default string for each field in the proper array location.
+  Defaults for all fields are displayed on the screen the user sees.  If
+  no default for a field is provided, load the default array at that
+  position with a null ("") value.
+
+  Protected fields are denoted using the "protected" array (of boolean
+  values).  For each field on the screen you want protected (unable to
+  alter, auto-skipped over during field switching operations) you place
+  a one (1) in the array index for the field.  Place zeros in all other
+  positions.  You MAY protect fields that have DEFAULT values (allowing
+  you to supply variable data in a default that the user cannot change).
+  You may create a "display only" template to display data in fields
+  by marking ALL fields protected.  In this case the template (with data
+  field text supplied in the "defaults") will appear with the cursor in
+  the upper-left corner. Any keypress will exit the "menu_display_template"
+  call.
+
+  Required fields are denoted using the "required" array (of numerical
+  values).  For each field on the screen that is required (i.e. a null
+  value is not allowed) you place a number in the array index for the field.
+  Place zeros in all other positions.  The number placed in the position is
+  the character offset of the LAST character of the LEFT marker and the
+  FIRST character of the RIGHT marker from the left and right edges of the
+  required field.  This "offset" is used to allow you to denote fields with
+  label or edge markers in your template and not have the required field
+  markers overlay it.  Both right and left "required field markers" are
+  supported, although only a "left required field marker" of an asterisk
+  ("*") is provided by default.  For example, if your array of required
+  fields is called "REQUIRED", and fields zero and three are required,
+  assigning "2" to $REQUIRED[0] and $REQUIRED[3] will cause an asterisk to
+  be overlayed on the template two characters to the left of the field.  The
+  user will not be able to press RETURN and exit the template until all
+  fields marked as "required" have data in them.  The template routines will
+  automatically clear the "required field markers" from the screen as values
+  are supplied (and the user hits RETURN).
+
+  Support is provided for "right edge required field markers" (which are
+  normally disabled) and changing the strings used for the markers.  The
+  rendition ("standout" as opposed to "normal") can also be changed.
+  These functions are controlled via the "menu_template_prefs" call.  Refer
+  to the "menu_template_prefs" routine documentation for more details.  If
+  you want a message displayed emphasizing the fact that required fields
+  are not filled in (and are marked for the user) it must be done in an
+  "exit routine" using a "template overlay" (you check the count of
+  required fields remaining to be filled in to decide whether you need the
+  message or not).
+
+  The optional "exit routine" is used to gain control each time a field tab
+  ("Tab" or up/down arrows) or "Return" key is pressed.  A string containing
+  the name of the exit routine in your code is supplied on the call.  When
+  this routine is called (from within "menu_display_routine") the calling
+  parameters (to YOUR routine) are:  
+
+    - A value indicating the direction the user moved:
+        -1 = Tabbed to previous field
+         0 = Pressed "Return" (no movement)
+         1 = Tabbed to next field
+    - The index of the field just left (or where "Return" was pressed)
+    - The index of the field about to be entered (same as the field just left
+      if "Return" was pressed).
+    - The number of required fields which still remain to be filled in.
+
+  When you return from your exit routine you must supply a return value which
+  indicates to "menu_display_template" whether or not you want it to exit 
+  (and return to the caller) at this time (and what field you want the cursor
+  placed at if you are not exiting).
+
+  A non-negative return value indicates "continue data input" (regardless of
+  whether "Return" was pressed by the user or not).  The non-negative value
+  is used as the index of the field in which you wish the cursor placed when
+  "menu_display_template" resumes processing.  In this way certain processing
+  (such as validating data in fields) can be done by an exit routine when the
+  user indicates data-entry is done.  If unacceptable data is found in a
+  field, error messages can be overlayed on the template using the
+  "menu_overlay_template" calls (discussed in the next major section).  You
+  should supply the index of the first field with data errors as the return
+  value, which places the cursor on the field with the error for the user.
+
+  A negative return value indicates "return now" (even if it was just a
+  "field tab" exit routine call).  However, there are actually two "negative
+  return values" to consider as follows:
+
+    -2 indicates "return now" unconditionally (even if all required fields
+       are not filled in).  This return value is generally used to abort
+       data entry when using the "required fields" support.  Data from
+       fields already filled in is not flushed.  The only difference between
+       this value ("-2") and a "-1" is that the check for required fields
+       being filled in is bypassed.
+
+    -1 indicates "return now" ONLY IF all required fields are filled in.
+       If there are required fields that still need data, the subsequent
+       action taken by "menu_display_template" is to position the cursor on
+       the first required field not filled in.  This return value is also
+       the return value to be used if you are not using the "required field"
+       support and wish to "return now" from "menu_display_template"
+       (indicating all data entry is correct and complete).
+
+  Syntax for a typical exit routine would look like:
+
+    sub exit_routine {
+      local($direction,$last_field_index,$next_field_index,$still_req) = @_;
+      if ($direction) { return($next_field_index); } # Tab, go to at next field
+      # Must have pressed "Return"
+      &menu_overlay_clear(); # Clear old overlays
+      if ($still_req) {
+        &menu_overlay_template(20,1,
+             "Fields marked with \"*\" are STILL required");
+        return(-1); # Position at first null required field
+      }
+      if ($all_ok) { return(-1); } # Allow user to be done
+      else {
+        [...] # Construct menu_overlay_template calls to denote errors
+        return($index); # Re-display (at some field) with overlays
+      }
+    }
+
+  Menu exit routines are not available when all fields are protected (and
+  it is a "display only" template).
+
+  A few "emacs-similar" control sequences are available to the user when
+  they are editing within a "menu_getstr" call as follows ("^" indicates
+  pressing the "CONTROL/CTRL" key, "^A" meaning "CNTL-A", etc.):
+
+    ^A - Move to the first character
+    ^E - Move to after the last character
+    ^F - Move to the next character (same as "right cursor")
+    ^N - Move to the next field (same as "tab")
+    ^P - Move to the previous field
+    ^B - Move to the previous character (same as "left cursor")
+    ^D - Delete the character at the cursor (shifting in any text at the right)
+    ^K - Delete (and "cut" into paste-buffer) text to the right (emacs "Kill")
+    ^U - Paste text in paste-buffer at the cursor (emacs "Yank")
+    ^L - Refresh the screen
+
+  Note that the "paste text" function is NOT the same control sequence used by
+  emacs (which uses "^Y").  This will be confusing to emacs users, but
+  currently the "^Y" function is processed as "terminal STOP".
+
+
+----------------------------------------------------------
+Handling Titles/Data-entry Errors - Template text overlays
+----------------------------------------------------------
+
+  There may be times when you want special "standout rendition" titles or when
+  you want to overlay special instructions for certain records.  Data entry
+  errors in fields may require a re-display of the current screen with a
+  textual overlay of the template with a suitable error message.  These
+  actions are achieved with "template overlays".  Template overlays are
+  created with one or more calls to "menu_template_overlay", specifying text
+  and the row and column location of where the text should start.  You may
+  specify any number of overlay areas at different locations on the screen. 
+
+  Overlays can be created in "standout rendition" and may be designated as
+  "sticky" (meaning they normally will not clear with other overlays).  A
+  "sticky" overlay area is normally only used for "standout rendition" title
+  areas (more or less "permanently attached" to the currently loaded
+  template).  Normal overlay areas are cleared by calling
+  "menu_clear_overlay(0)".  ALL overlay areas (including "sticky" ones) are
+  cleared by calling "menu_clear_overlay(1)" (or by loading a new template
+  with "menu_load_template").  
+
+  Data entry errors can be corrected in two manners.  The first (and
+  simplest to code) involves multiple calls to "menu_display_template".  When
+  errors are detected upon return from "menu_display_template, the "defaults"
+  array is loaded with the previously returned values in the "entered_data"
+  array.  Then, prior to calling "menu_display_template" again,
+  "menu_load_overlay" is called to create an error message overlay on the
+  screen.  A subsequent call to "menu_display_template" re-displays the old
+  data (with the error message on the screen) and allows the user to correct
+  any values.  While simpler to program, this technique means the entire
+  screen is re-displayed each time errors are detected and new data is
+  requested. 
+
+  A more complex (but screen I/O efficient) way to correct/detect errors is
+  to use a "template exit routine" (described in the previous section). 
+  Template overlays can be created and cleared within a template exit
+  routine.  In this manner a single call to "menu_display_template" and a
+  well designed exit routine can validate all fields and exit only when
+  required values of the proper format are provided.  The exit routine can
+  also place error messages on the screen and position the cursor on specific
+  fields, with only the changed areas of the screen refreshed as necessary.
+
+  ----------
+  Routine:      menu_overlay_template
+
+  Syntax:       &menu_overlay_template(row,col,"Overlay text",rendition,
+                                       sticky);
+
+  Input args:   - Row, Column position to start the overlay.
+                  Required.  Must fall within current screen boundaries.
+                - Text to overlay the template with
+                  Required.  Must be non-null.
+                - Rendition (0=normal, 1=standout).
+                  Optional.  Defaults to "normal".
+                - Sticky flag (0=normal, 1=sticky)
+                  Optional.  Defaults to "normal".
+
+  Returns:      0=Success, 1=No template loaded or invalid data (row,col
+                must be on screen and text must be non-null)
+
+  This routine places the specified text on the screen for all subsequent
+  calls until "menu_overlay_clear" is called (or a new template is loaded
+  with "menu_load_template".  The entire string is displayed in standout
+  rendition if the rendition flag is non-zero.  "Sticky" overlay areas
+  are not cleared by "menu_overlay_clear" unless it is called with the
+  "clear sticky areas" flag.
+
+  Note that text overlayed on top of data input fields appears on the screen
+  but will NOT be returned back as user-entered data on the
+  "menu_display_template" call.  Overlays are not a method for providing
+  default data in data entry fields (you must use the "defaults" parameter on
+  the "menu_display_template" call. 
+
+  ----------
+  Routine:      menu_overlay_clear
+
+  Syntax:       &menu_overlay_clear($clear_sticky);
+
+  Input args:   Flag to indicate whether or not to clear the "sticky"
+                overlay areas.  Optional.  Defaults to "don't clear sticky
+                areas".
+
+  Returns:      Nothing
+
+  By default, this routine clears all "non-sticky" loaded template overlay
+  text.  If the "clear sticky" flag is non-zero, the "sticky" overlay areas
+  are cleared, too.  For each field cleared the text which was placed on the
+  screen is overwritten with blanks.  
+
+-----------------------
+Other template routines
+-----------------------
+
+  ----------
+  Routine:      menu_template_prefs
+
+  Syntax:       &menu_template_prefs(left-mark-set,left-mark-clear,left-attr,
+                                   right-mark-set,right-mark-clear,right-attr);
+
+  Input args:   Character strings denoting character strings to overlay on
+                on the template to denote "required fields".  Defaults are:
+                    left-mark-set         "*"
+                    left-mark-clear       " " (blank)
+                    left-attr             0   (normal rendition)
+                    right-mark-set        ""  (null-string, disabled)
+                    right-mark-clear      ""  (null-string, disabled)
+                    right-attr            0   (normal rendition)
+
+  Returns:      Nothing
+
+  This call is used to provide alternate ways of denoting required fields
+  during a call to "menu_display_template".  By default only "left edge"
+  required field markers are supplied and they are denoted with an asterisk
+  ("*") in normal rendition.  Any character string may be used to mark either
+  (or both) edges of a required field, and separate strings may be inserted
+  after a required field is supplied (and the marker "cleared").  The length
+  of the string is accounted for in positioning it so the proper offset is
+  maintained between the marker and the field.  It is the Perl programmer's
+  responsibility to make sure the marker offset values (provided in the
+  "required" array) and the length of the strings used position the markers
+  at the proper place on the template (and don't wrap at the edges).
+
+  Only the rendition of the "marker set" string can be changed.  The "marker
+  clear" strings are always in "normal" rendition.
+
+  For example, assume a required field "$FIELD[0]" is denoted on the
+  template as:
+
+       Name:      [__________________]
+
+  To change the left required field marker to "REQ->", activate the right
+  required field marker (making it "<-REQ"), the following
+  call would be used:
+
+    &menu_template_prefs("REQ->","     ",0,"<-REQ","     ",0);
+    $REQUIRED[0] = 2; # Offset two (so "[" and "]" are not overlayed)
+    &menu_load_template(...);
+    &menu_display_template(...,*REQUIRED);
+
+  Produces the following when the template is displayed:
+
+       Name: REQ->[                  ]<-REQ
+
+  ----------
+  Routine:      menu_template_setexit
+
+  Syntax:       &menu_template_setexit(@exitseq);
+                          OR
+                &menu_template_setexit("seq1","seq2",...);
+
+  Input args:   Array or list of character strings holding characters (or
+                sequences of characters) which cause "menu_display_template"
+                to exit. Optional.  Defaults to "no additional sequences".
+
+  Returns:      Nothing
+
+  This call is used to provide alternate ways of exiting from the call to
+  "menu_display_template".  By default only "Return" causes the termination
+  of data input by the user.  By using "menu_template_setexit", additional
+  "escape sequences" or control keys can be defined to allow return.  By
+  using the "menu_getexit" call (see "Other Menu-Related "menu.pl" Routines")
+  the actual key(s) used can be interrogated and subsequent program action
+  taken accordingly.  For example, you could define "Control-X" as an
+  additional exit sequence with "&menu_template_setexit("\cX");" to indicate
+  "discard the data just entered" (to allow a user to abort the data entry
+  process). After you return from menu_display_template you would use
+  "if (&menu_get_exit eq "\cX") ..." to check if the exit sequence that cause
+  you to return was "Control-X" and discontinue processing of the data.
+
+
+---------------------------
+Template data entry example
+---------------------------
+
+  The following is an example of a full-screen data entry program using the
+  name/addr/phone template used as an example above.  This program includes
+  all features available.  Note especially the use of the "field default" 
+  array combined with the "field protection" to create a record number 
+  field with default data (the current record number) that cannot be
+  modified by the user.  Both types of error detection/correction are used.
+  This program can be found in the PerlMenu distribution, as the file
+  "demo_template".
+
+    ----------
+    #!/usr/local/bin/perl5
+    BEGIN { $Curses::OldCurses = 1; }
+    use Curses;
+
+    require "./menu.pl";        # Main menu package
+    require "./menuutil.pl";    # For "pause" and "print_nl" routines
+
+    @input_data = ();   # Place to put data entered on screen
+    @defaults = ();     # Default data
+    @protect = ();      # Protected markers
+    @required = ();     # Required field markers
+    $bell = "\007";     # Ascii bell character
+    $row = $col = 0;    # Storage for row/col used by menuutil.pl
+
+    #
+    # Since we are not using menus in this example, we need to call "menu_init"
+    # to initialize the curses environment.  Not necessary if you have at
+    # least one menu display (which will include a menu_init) first.
+    #
+    &menu_init();
+
+    #
+    # Activate left and right markers, both in standout rendition.
+    #
+    &menu_template_prefs("*"," ",1,"*"," ",1);
+
+    #
+    # Load the template from the data file (created with a text editor)
+    # Data entry fields denoted by underscores ("_") or back-slashes ("\");
+    #
+    &menu_load_template("./template_data");
+    &menu_overlay_template(0,28,"Perl Menu Version 3.3",1,1);
+    &menu_overlay_template($LINES-5,10,
+         "Fields between \"*\" are required.",1);
+
+    #
+    # Define "Control X" as "stop"
+    #
+    &menu_template_setexit("\cX");
+
+    #
+    # Set defaults for all records the same in this example.
+    # For record updating you would set the defaults to the existing values
+    # from an old record.
+    #
+    $defaults[0] = 0;                   # Record number
+    $defaults[1] = "Sample name";       # Name
+    $defaults[2] = "Sample address";    # Addr
+    $defaults[3] = "Sample city";       # City
+    $defaults[4] = "IA";                # State
+    $defaults[5] = "";                  # Zip
+    $defaults[6] = "";                  # Phone - area code
+    $defaults[7] = "";                  # Phone - first three digits
+    $defaults[8] = "";                  # Phone - last four digits
+    $defaults[9] = "Barney";            # Password
+
+    #
+    # Set protected fields for all records in this example.
+    # This lets us supply a record number as a default in the first field but
+    # not allow the user to change it.
+    #
+    $protect[0] = 1;    # Record number (protected, filled in by call parm)
+    $protect[1] = 0;    # All remaining fields are unprotected
+    $protect[2] = 0;
+    $protect[3] = 0;
+    $protect[4] = 0;
+    $protect[5] = 0;
+    $protect[6] = 0;
+    $protect[7] = 0;
+    $protect[8] = 0;
+    $protect[9] = 0;
+
+    #
+    # Set required fields for records in this example.
+    # Note that the offset value is "2" to prevent overlaying the "["
+    # on the template.
+    #
+    $required[0] = 0;
+    $required[1] = 2;   # Name
+    $required[2] = 0;
+    $required[3] = 0;
+    $required[4] = 0;
+    $required[5] = 0;
+    $required[6] = 0;
+    $required[7] = 0;
+    $required[8] = 0;
+    $required[9] = 2;   # Password
+
+    #
+    # Input three records
+    #
+    for ($i = 1; $i <= 3; $i++) {
+
+      $defaults[0] = $i;    # Set the record number in the protected field
+
+      # IMPORTANT: Note the use of pointers to arrays here
+      &menu_display_template(*input_data,*defaults,*protect,"template_exit",
+                             *required);
+      last if (&menu_getexit() eq "\cX");
+
+      # Demonstrate a template overlay the first time
+      if ($i == 1) {
+        @bad_data = @input_data; # Reload the data we just got
+        &menu_overlay_template($LINES-5,10,"This is a template overlay.$bell");
+        &menu_overlay_template($LINES-4,10,"(It could be an error message)");
+        &menu_overlay_template($LINES-3,10,
+             "Note that the data is from the previous screen.");
+        # Let them reenter data
+        &menu_display_template(*input_data,*bad_data,*protect,"template_exit",
+                               *required);
+        &menu_overlay_clear();
+        last if (&menu_getexit() eq "\cX");
+      }
+
+      # Display what we got the last time
+      &clear(); $row = $col = 0;
+      &print_nl("Record #$i",1);
+      &print_nl("Here is what was returned in \@input_data:",2); 
+      for ($j = 0; $j <= $#input_data; $j++) {
+        &print_nl("\$input_data[$j]: $input_data[$j]",1);
+      }
+      &pause("");
+    }
+
+    &clear(); $row = $col = 0;
+    &refresh();
+    exit(0);
+
+    #**********
+    # TEMPLATE_EXIT - Exit routine for "menu_display_template"
+    #**********
+    sub template_exit {
+      local($direction,$last_index,$next_index,$still_required) = @_;
+
+    # Return now if they are skipping between fields
+      if ($direction) { return($next_index); }
+
+    # They pressed "Return".
+      &menu_overlay_clear(); # Clear any old overlays
+
+    # Put out message if there are still required fields.
+      if ($still_required) {
+        &menu_overlay_template($LINES-5,10,
+    "Fields preceded with a \"*\" are STILL required.",1);
+        return(-1);    # Still need required field(s) - auto-position
+      }
+
+    # Let them be done.
+      return(-1);
+    }
+
+    ----------
+
+  This program inputs three records, displaying the result after each data
+  entry panel is processed.  An exit routine is used to make sure the "Name" 
+  field is supplied on all records.  After entry of the first record, the data
+  is re-displayed with an error message overlay with the previous screens data
+  supplied as defaults.  Of course a "real" program would process the
+  entry-array into a database record and update it.  When updating existing
+  records the "defaults" would be the current record's field contents.  
+
+
+--------------
+For the record
+--------------
+
+PerlMenu - Perl library module for curses-based menus & data-entry templates
+Copyright (C) 1992-96  Iowa State University Computation Center             
+
+   This Perl library module is free software; you can redistribute it
+   and/or modify it under the terms of the GNU Library General Public
+   License (as published by the Free Software Foundation) or the
+   Artistic License.
+
+   This library is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of 
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+   Library General Public License for more details.
+
+   You should have received a copy of the GNU Library General Public
+   License along with this library; if not, write to the Free
+   Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.

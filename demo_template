@@ -1,0 +1,208 @@
+#!/usr/local/bin/perl5
+#**************************************************************************
+# demo_template --  Full-screen data entry template demo
+#
+# Notes:   Perl4 - Requires curseperl
+#          Perl5 - Requires William Setzer's "Curses" extension
+#
+#          Demonstrates data entry using templates (template file is
+#          "template_data" in the current directory)
+#
+# Author:  Steven L. Kunz
+#          Networked Applications
+#          Iowa State University Computation Center
+#          Ames, IA  50011
+#          Email: skunz@iastate.edu
+#
+# Date:    February 1996
+#**************************************************************************
+
+# Comment these lines for use with Perl4/curseperl
+BEGIN { $Curses::OldCurses = 1; }
+use Curses;
+
+#
+# Load the key package
+#
+require "./menu.pl";		# Main menu package
+require "./menuutil.pl";	# For "pause" and "print_nl" routines
+
+@input_data = ();	# Place to put data entered on screen
+@defaults = ();		# Default data
+@protect = ();		# Protected markers
+@required = ();		# Required field markers
+$bell = "\007";		# Ascii bell character
+$row = $col = 0;	# Storage for row/col used by menuutil.pl
+
+#
+# Since we are not using menus in this example, we need to call "menu_init"
+# to initialize the curses environment.  Not necessary if you have at
+# least one menu display (which will include a menu_init) first.
+#
+&menu_init();
+
+#
+# Activate left and right markers, both in standout rendition.
+#
+&menu_template_prefs("*"," ",1,"*"," ",1);
+
+#
+# Load the template from in-line code (ending at "END_OF_TEMPLATE" in this
+# source file).  Data entry fields denoted by underscores ("_") or
+# back-slashes ("\");
+#
+# To demonstate loading the template from the data file, comment out all
+# statements from "&menu_load_template_array(...)" to (and including) the
+# "END_OF_TEMPLATE" statement and ADD the following line instead:
+#
+#        &menu_load_template("./template_data");
+#
+# This will load the template from the datafile "./template_data" instead
+# of from the in-line source.
+#
+&menu_load_template_array(split("\n", <<'END_OF_TEMPLATE'));
+
+                        Template Entry Demonstration
+
+   Address Data Example                    Record # ___
+
+   Name: [_____________________________________________]
+   Addr: [_____________________________________________]
+   City: [__________________]  State: [__]  Zip: [\\\\\] 
+
+   Phone: (\\\) \\\-\\\\            Password: [^^^^^^^^]
+
+   Enter all information available.
+   Edit fields with left/right arrow keys or "delete".
+   Switch fields with "Tab" or up/down arrow keys.
+   Indicate completion by pressing "Return".
+   Refresh screen with "Control-L".
+   Abort this demo here with "Control-X".
+END_OF_TEMPLATE
+
+&menu_overlay_template(0,28,"Perl Menu Version 3.3",1,1);
+&menu_overlay_template($LINES-5,10,
+	"Fields marked with a \"*\" are required.",1);
+
+#
+# Define "Control X" as "abort data input"
+#
+&menu_template_setexit("\cX");
+
+#
+# Set defaults for all records the same in this example.
+# For record updating you would set the defaults to the existing values
+# from an old record.
+#
+$defaults[0] = 0;			# Record number
+$defaults[1] = "Sample name";		# Name
+$defaults[2] = "Sample address";	# Addr
+$defaults[3] = "Sample city";		# City
+$defaults[4] = "IA";			# State
+$defaults[5] = "";			# Zip
+$defaults[6] = "";			# Phone - area code
+$defaults[7] = "";			# Phone - first three digits
+$defaults[8] = "";			# Phone - last four digits
+$defaults[9] = "Barney";		# Password
+
+#
+# Set protected fields for all records in this example.
+# This lets us supply a record number as a default in the first field but
+# not allow the user to change it.
+#
+$protect[0] = 1;	# Record number (protected, filled in by call parm)
+$protect[1] = 0;	# All remaining fields are unprotected
+$protect[2] = 0;
+$protect[3] = 0;
+$protect[4] = 0;
+$protect[5] = 0;
+$protect[6] = 0;
+$protect[7] = 0;
+$protect[8] = 0;
+$protect[9] = 0;
+
+#
+# Set required fields for records in this example.
+# Note that the offset value is "2" to prevent overlaying the "["
+# on the template.
+#
+$required[0] = 0;
+$required[1] = 2;	# Name
+$required[2] = 0;
+$required[3] = 0;
+$required[4] = 0;
+$required[5] = 0;
+$required[6] = 0;
+$required[7] = 0;
+$required[8] = 0;
+$required[9] = 2;	# Password
+
+#
+# Input three records
+#
+for ($i = 1; $i <= 3; $i++) {
+
+  $defaults[0] = $i;	# Set the record number in the protected field
+
+  # IMPORTANT: Note the use of pointers to arrays here
+  &menu_display_template(*input_data,*defaults,*protect,"template_exit",
+			 *required);
+  last if (&menu_getexit() eq "\cX");
+
+  # Demonstrate a template overlay the first time
+  if ($i == 1) {
+    @bad_data = @input_data; # Reload the data we just got
+    &menu_overlay_template($LINES-5,10,"This is a template overlay.$bell");
+    &menu_overlay_template($LINES-4,10,"(It could be an error message)");
+    &menu_overlay_template($LINES-3,10,
+	"Note that the data is from the previous screen.");
+    # Let them reenter data
+    &menu_display_template(*input_data,*bad_data,*protect,"template_exit",
+			   *required);
+    &menu_overlay_clear();
+    last if (&menu_getexit() eq "\cX");
+  }
+
+  # Display what we got the last time
+  &clear_screen();
+  &print_nl("Record #$i",1);
+  &print_nl("Here is what was returned in \@input_data:",2); 
+  for ($j = 0; $j <= $#input_data; $j++) {
+    &print_nl("\$input_data[$j]: $input_data[$j]",1);
+  }
+  &pause("");
+}
+
+&clear_screen();
+&refresh();
+exit(0);
+
+#**********
+# TEMPLATE_EXIT - Exit routine for "menu_display_template"
+#**********
+sub template_exit {
+  local($direction,$last_index,$next_index,$still_required) = @_;
+
+# Return now if they are skipping between fields
+  if ($direction) { return($next_index); }
+
+#
+# Check for forced exit (aborted data entry).
+# Note that this routine uses a "-2" return code, which means "ignore
+# required fields checking".
+#
+  if (&menu_getexit() eq "\cX") { return(-2); }
+
+# User says they are done (they pressed "Return").
+  &menu_overlay_clear(); # Clear any old overlays
+
+# Put out message if there are still required fields.
+  if ($still_required) {
+    &menu_overlay_template($LINES-5,10,
+	"Fields marked with a \"*\" are STILL required.",1);
+    return(-1);		# Still need required field(s) - auto-position
+  }
+
+# Let them be done.
+  return(-1);
+}

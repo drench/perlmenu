@@ -1,0 +1,70 @@
+#!/usr/local/bin/perl5
+#**************************************************************************
+# demo_util --  Demonstate some utilities in menuutil.pl
+#
+# Notes:   Perl4 - Requires curseperl
+#          Perl5 - Requires William Setzer's "Curses" extension
+#
+#          Demostrates some basic curses techniques via a set of
+#          utility routines (which can also be snipped or built on).
+#
+# Author:  Steven L. Kunz
+#          Networked Applications
+#          Iowa State University Computation Center
+#          Ames, IA  50011
+#          Email: skunz@iastate.edu
+#
+# Date:    February 1996
+#**************************************************************************
+
+# Comment these lines for use with Perl4/curseperl
+BEGIN { $Curses::OldCurses = 1; }
+use Curses;
+
+#
+# Load the key package (and utility routines)
+#
+require "./menu.pl";
+require "./menuutil.pl";
+
+#
+# Required global variables are $window, $row, and $col.
+# These variables are used by the menuutil.pl routines.
+#
+$window = $row = $col = 0;
+
+# Init the curses environment
+  $window = &menu_init();
+
+# Clear screen and center a top title.
+  &top_title("PerlMenu Utility Routine Demo");
+
+# Put out a couple lines.
+  &print_nl("The first line (followed by two new-lines).",2);
+  &print_nl("The second line.",1);
+
+# Pause (with the default prompt);
+  &pause("");
+
+# Put out a couple more lines.
+  &print_nl("The third line",1);
+  &print_nl("The fourth line",2);
+
+# See if they want to see the last line.
+  if (&query("Do you want to see a pop-up \"ask\" box?","yn") eq "n") {
+    &new_line(1);
+    &print_nl("Sigh ... and it was the best demo!",1);
+    if (&query("Are you SURE you don't want to see it?","yn") eq "y") {
+      exit(0);
+    }
+  }
+
+# Do the pop-up query.
+  $name = &popup_ask("Please enter your first name: ",20);
+  &pause("Goodbye, $name.  Press any key to exit");
+
+# All done - clean up and go home.
+  &clear_screen();
+  &refresh();
+  exit(0);
+

@@ -1,0 +1,18 @@
+
+                           Template Demonstration
+                        Personal Account Information
+
+          Move between fields with the TAB, Up and Down arrow keys.
+    ONLY when you have completed all of the fields, press the RETURN key.
+    Use Control-L to refresh the screen.  Use Control-X to abort.
+
+First Name                         [________________________________________]
+Middle Name                        [________________________________________]
+Last Name                          [________________________________________]
+Daytime Area Code & Phone Number   [____________________]
+Institution Name                   [________________________________________]
+Institution Street Address         [________________________________________]
+Institution City, State, ZIP       [________________________________________]
+Is this address in the U.S.A.?     [_]   Y or N
+
+                                   ---Fields marked with "*" are required!

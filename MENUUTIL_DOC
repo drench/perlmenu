@@ -1,0 +1,269 @@
+                                 menuutil.pl
+                         Perl Menu Support Utilities
+                                 Version 1.1
+                              February 19, 1996
+
+                               Steven L. Kunz
+                           Networked Applications
+                  Iowa State University Computation Center
+                            Iowa State University
+                                 Ames,  Iowa
+                  
+--------
+Overview
+--------
+
+  After writing several curseperl programs which used menu.pl I learned there
+  was often a set of utility routines that I used in each program.  I
+  eventually collected these in a module ("menuutil.pl") which I included in
+  each source.  These routines provide titles, text display, and prompting -
+  all the while maintaining global row and column positions. 
+
+  These routines are probably best understood by studying the "demo_util"
+  program supplied in this distribution.  In any case, some routines rely on
+  standard "menu.pl" routines (menu_getstr, specifically) so you add 'require
+  "menuutil.pl";' to existing PerlMenu programs.
+
+
+--------------------------
+Official Distribution Site
+--------------------------
+
+  The author's official distribution is available via anonymous FTP from:
+
+    ftp://ftp.iastate.edu/pub/perl/perlmenu.v3.3.tar.Z
+
+  Other sites on the net may offer this package.  New releases are announced
+  in the Usenet Newsgroup "comp.lang.perl.announce".
+
+  PerlMenu also has an official WWW page at:
+
+    http://www.cc.iastate.edu/perlmenu/
+
+
+---------------------------
+Required setup in your code
+---------------------------
+
+  The routines provided in "menuutil.pl" are used for some common curses
+  screen I/O functions (such as clearing the screen, formatting top-titles,
+  placing text on the screen, and prompting for information).  The utility
+  routines require some initialization and variable management (or at least
+  preservation) in your own code.
+
+  There are three REQUIRED variables you must assign before using any 
+  menuutil routines.  These are:
+
+    $window - The curses main window value
+    $row    - Integer containing screen row offset of the cursor
+    $col    - Integer containing screen column offset of the cursor
+
+  All the menuutil routines use "$row" and "$col" to maintain the current
+  location on the screen.  You should initialize both to zero.  The "$window"
+  variable can be assigned in two ways (depending on your style of PerlMenu
+  program coding).  If you issue the curses "initscr" call yourself, the
+  front of your program should have the following statements:
+
+    require "menu.pl";                 # PerlMenu package (main routines)
+    require "menuutil.pl";             # PerlMenu package (utility routines)
+    [...]
+    $row = $col = 0;                   # Init row and col variables
+    $window = &initscr();              # Get main screen window value
+    &menu_curses_application($window); # Tell menu.pl what we are using
+
+  If you use the return value from "menu_init" (letting menu.pl do the
+  "initscr" for you), the following is correct:
+
+    require "menu.pl";                 # PerlMenu package (main routines)
+    require "menuutil.pl";             # PerlMenu package (utility routines)
+    [...]
+    $row = $col = 0;                   # Init row and col variables
+    $window = &menu_init();            # Init the curses environment
+
+  If you do any output to the screen yourself (i.e. you do some of your own
+  "move", "addstr", or other curses commands) then you must maintain "$row"
+  and "$col" so they are accurate for the menuutil routines you may call
+  after that.  This has lots of implications.  For example, if you "clear"
+  the screen in your code, you must remember to reset the "$row" and "$col"
+  values to zero (since on most systems a "clear" will home the cursor to
+  the upper left corner.  For example:
+
+    &clear(); $row = $col = 0; &refresh();  # Clear the screen.
+
+  The menuutil routine "clear_screen" does just this action (with the
+  ability to skip the "refresh" for most efficient screen I/O coding).  Of
+  course ANY action which moves the screen cursor must be accounted for.
+  If you use "addstr" to place text on the screen, you must adjust "$col"
+  by the length of the string (accounting for screen wrap as necessary).
+
+  Full-screen manipulation with curses can become involved very fast.  The
+  menuutil routines provide some basic actions that hopefully can get most
+  applications up and running with a minimum of effort.
+
+
+-------------------------
+Solicitation for Comments
+-------------------------
+
+  If you have found a bug, documentation problem, or would really like to
+  see a new utility routine (or have one you think could be added), feel free
+  to let me know.  Send your e-mail cheers/jeers to "skunz@iastate.edu".  
+
+
+---------------------
+Text Display Routines
+---------------------
+
+  ----------
+  Routine:      clear_screen
+
+  Syntax:       &clear_screen(refresh_flag);
+
+  Input args:   Boolean flag (0=don't do a "refresh", 1=do a "refresh")
+
+  Returns:      Nothing (screen buffer plus row & col variables cleared)
+
+  The "clear_screen" routine clears the main window buffer and resets
+  the row and column variables.  Since you will normally be doing further
+  screen output a "refresh" (to actually cause terminal I/O) is not done
+  unless requested by the option flag.
+
+  ----------
+  Routine:      top_title
+
+  Syntax:       &top_title("Title string");
+
+  Input args:   String for the title
+
+  Returns:      Nothing
+
+  The "top_title" routine clears the main window and centers the title
+  string on the top line.  The title is normally presented in "standout"
+  rendition.  Normal rendition may be forced by placing a dash ("-") as
+  the first character.
+
+  Titles longer than the screen width will be truncated.
+  A "refresh" is ALWAYS done before return.
+
+  ----------
+  Routine:      print_nl
+
+  Syntax:       &print_nl("Text string",new_line_count);
+
+  Input args:   - Text string to put at cursor location
+                - Number of new-lines to add afterwards
+
+  Returns:      Nothing
+
+  The "print_nl" routine adds text to the screen, maintaining row and col
+  locations.  If the text rolls past the bottom of the screen, the screen
+  is cleared and text starts again at the top.  Automatic line-wrap is
+  handled.    A "refresh" is ALWAYS done before return.
+
+
+  ----------
+  Routine:      new_line
+
+  Syntax:       &new_line(new_line_count);
+
+  Input args:   Number of new-lines to add
+
+  Returns:      Nothing
+
+  The "new_linel" routine adds blank lines to the screen, maintaining row and
+  col locations.  If the action rolls past the bottom of the screen, the
+  screen is cleared and action starts again at the top.  This routine is
+  useful if you use "menu_getstr" to input data and want to bump the cursor
+  down to the next line after the user hits "Return".   A "refresh" is ALWAYS
+  done before return.
+
+
+ 
+------------------
+Prompting Routines
+------------------
+
+  ----------
+  Routine:      query
+
+  Syntax:       &query("Prompt text","allowed_values");
+
+  Input args:   - Prompt text string
+                - Allowed values string
+
+  Returns:      Single character from "allowed_values"
+
+  The "query" routine takes the prompt text and appends the list of values
+  allowed (reformatted in "user-friendly format").  For example, if the
+  following were supplied:
+
+    $val = &query("Delete file?","yn?");
+
+  what the user would see would be:
+
+     Delete file? (y|n|?)
+
+  If a value other than "y" or "n" or "?" was supplied the routine will
+  automatically indicate the error and re-prompt until a proper value is
+  supplied.  When the routine returns you are assured that the value
+  returned is one of those in the "allowed_values" string.
+
+  ----------
+  Routine:      pause
+
+  Syntax:       &pause("Prompt text");
+
+  Input args:   Prompt text string
+                Optional.  Defaults to "[Press any key to continue]"
+
+  Returns:      Nothing
+
+  The "pause" routine moves to a new line, supplies the prompt, and pauses
+  until any key is pressed.
+
+  ----------
+  Routine:      popup_ask
+
+  Syntax:       &popup_ask("Prompt text",max_len,"Default string",
+                           hidden_flag,numeric_flag);
+
+  Input args:   Note: All parms are optional
+                - Prompt string
+                - Maximum data input length
+                - Default value string
+                - Boolean flag (0=show, 1=hidden)
+                - Boolean flag (0=alpha-numeric, 1=numeric)
+
+  Returns:      Nothing
+
+  The "popup_ask" routine builds a popup dialog box in the center of the
+  screen.  Calculation of the box size and position is automatic (based on
+  the length of prompt and maximum data length).  If no parameters are
+  supplied a box the width of the screen (with the maximum size data area)
+  is built.
+
+  A default value (pre-loaded in the data area) can be supplied.  The 
+  "hidden_flag" allows for password-style prompting.  The "numeric_flag"
+  indicates that only numeric digits (0-9) are allowed.
+
+
+--------------
+For the record
+--------------
+
+PerlMenu - Perl library module for curses-based menus & data-entry templates
+Copyright (C) 1992-96  Iowa State University Computation Center             
+
+   This Perl library module is free software; you can redistribute it
+   and/or modify it under the terms of the GNU Library General Public
+   License (as published by the Free Software Foundation) or the
+   Artistic License.
+
+   This library is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of 
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+   Library General Public License for more details.
+
+   You should have received a copy of the GNU Library General Public
+   License along with this library; if not, write to the Free
+   Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.

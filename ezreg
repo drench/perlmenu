@@ -1,0 +1,146 @@
+#!/usr/local/bin/perl5
+#***************************************************************************
+# EasyReg -- PerlMenu Full-screen Registration Demo
+#            (a "practical" demo for menu.pl)
+#
+# Notes:   Perl4 - Requires curseperl
+#          Perl5 - Requires William Setzer's "Curses" extension
+#
+# Thanks:
+#          This is a "trimmed down" example of a registration program
+#          developed by Alan Cunningham while we were working together on
+#          template exits.  Alan's code was clever enough (and useful enough)
+#          for me to warrant including it in this distribution.
+#          Thanks, Alan!
+#                                            Steve Kunz
+#
+# Author:  Alan  Cunningham
+#          NASA Spacelink Project
+#          Marshall Space Flight Center
+#          Huntsville, AL
+#
+# Date:    February 1996
+#****************************************************************************
+
+# Comment these lines for use with Perl4/curseperl
+BEGIN { $Curses::OldCurses = 1; }
+use Curses;
+
+#
+# Load the key packages
+#
+  require "./menu.pl";
+  require "./menuutil.pl";
+
+# These three arrays are required for the menu routines...all three must
+# stay in the same order.  [0] is first field on screen ... etc.
+  @ENTERED=();
+  @DEFAULT=();
+  $DEFAULT[7] = "Y";		#Country=USA?
+  @PROTECT=();
+
+#
+# This array is NOT required for the menu routines, but is used by this code
+# to ensure we have answers for all the right fields.
+#
+  $REQUIRED[0] = 2;		#First Name
+  $REQUIRED[1] = 0;		#Middle Name
+  $REQUIRED[2] = 2;		#Last Name
+  $REQUIRED[3] = 0;		#Daytime Phone Number
+  $REQUIRED[4] = 2;		#Ed Inst Name
+  $REQUIRED[5] = 2;		#Add line 1
+  $REQUIRED[6] = 2;		#Add line 2
+  $REQUIRED[7] = 2;		#Country=USA?
+
+  $req_field_cnt = $#REQUIRED;	#number of fields to check for req data
+  $basefieldline = 7;		#Where do fields start
+  $markcol = 34;		#Where to mark missed fields
+  $reqline = 16;		#Where to put the required reminder text
+  $reqtext = "These are STILL required--^";
+
+#
+# Set up curses and the menu routines
+#
+  $window = &initscr();
+  &menu_curses_application($window);
+  &menu_init();
+
+#
+# Load the template and add a standout "sticky" title
+#
+  &menu_load_template("./template_reg");
+  &menu_overlay_template(0,28,"Perl Menu Version 3.3",1,1);
+
+#
+# Build some parts we couldn't put into the template file (because the
+# "caret" is a field marker)
+#
+  &menu_overlay_template($reqline,$markcol,"^");
+
+#
+# Define "Control X" as "abort data input".
+#
+  &menu_template_setexit("\cX");
+
+#
+# Display the form and get responses.
+# Use an exit routine to check to make sure all required fields are supplied.
+#
+  &menu_display_template(*ENTERED,*DEFAULT,*PROTECT,"template_exit",*REQUIRED);
+
+#
+# Display what we got and exit.
+# You add the rest of the code to do something with it.
+#
+  &top_title("Registration Demo");
+  if (&menu_getexit() eq "\cX") {	# Check for aborted data entry
+    &print_nl("(Data entry was aborted by Control-X)",2);
+  } else {
+    &print_nl("Here is what was returned in \@ENTERED:",2); 
+    for ($j = 0; $j <= $#ENTERED; $j++) {
+      &print_nl("\$ENTERED[$j]: $ENTERED[$j]",1);
+    }
+  }
+  &pause("");
+
+  &endwin();
+  exit(1);
+
+#**********
+# Exit routine for menu_display_template
+#
+# This routine gets control from within "menu_display_template" every time
+# the user tabs between fields or presses return.  The basic action is
+# to allow the user to freely enter data and tab between fields until they
+# press "Return".  At that point, a check is made for some entry in all
+# required fields.  If some required fields are not filled in, all remaining
+# required fields are marked (using a template overlay) and the user is
+# positioned at the first required field not filled in.  This process
+# continues until all required fields are supplied.
+#**********
+sub template_exit {
+  local($direction,$last,$next,$still_required) = @_;
+
+#
+# Return now if they are skipping between fields
+#
+  if ($direction) { return($next); }
+
+#
+# Check for forced exit (aborted data entry).
+# Note that this routine uses a "-2" return code, which means "ignore
+# required fields checking".
+#
+  if (&menu_getexit() eq "\cX") { return(-2); }
+
+#
+# User says they are done (they hit "Return").
+#
+  &menu_overlay_clear();
+  if ($still_required) {
+    &menu_overlay_template($reqline,($markcol+1)," " x 40);
+    &menu_overlay_template($reqline,8,$reqtext,1);
+    return(-1);			# Let required field processing handle this.
+  }
+  return(-1);			# No missing reqd fields - will really return.
+}

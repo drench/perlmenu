@@ -1,0 +1,103 @@
+#!/usr/local/bin/perl5
+#*********************************************************************
+# demo_top --  PerlMenu demo - Usage of "top menu" functions.
+#
+# Note:    Perl4 - Requires curseperl
+#          Perl5 - Requires William Setzer's "Curses" extension
+#
+#          Demonstrates technique to use "top" menu feature.
+#
+# Author:  Steven L. Kunz
+#          Networked Applications
+#          Iowa State University Computation Center
+#          Ames, IA  50011
+#          Email: skunz@iastate.edu
+#
+# Date:    February 1996
+#********************************************************************
+
+# Comment these lines for use with Perl4/curseperl
+BEGIN { $Curses::OldCurses = 1; }
+use Curses;
+
+#
+# Load the key package
+#
+require "./menu.pl";
+
+# Prepare and display the main (top) menu
+while (1) {
+  &menu_init(1,"PerlMenu Version 3.3",1,"-Top Menu Demonstration");
+  &menu_item("Exit this demo","exit");
+  &menu_item("Animal","animal");
+  &menu_item("Mineral","mineral");
+  &menu_item("Vegetable","vegetable");
+
+# Get selection
+  $sel= &menu_display("");
+
+# Process selection (ignore "up" at top level)
+  if ($sel ne "%UP%") {
+    if ($sel eq "exit") { exit; }
+    if ($sel eq "animal") { &animal(); }		# Call lower level
+    elsif ($sel eq "mineral") { &mineral(); }		# Call lower level
+    elsif ($sel eq "vegetable") { &vegetable(); }	# Call lower level
+  }
+}
+
+# One level down - can call lower levels
+sub animal {
+  while (1) {
+    &menu_init(1,"Lower animal menu");
+    &menu_item("Dog","dog");
+    &menu_item("Cat","cat");
+    $sel = &menu_display("");
+    if ($sel eq "%UP%") { return; } # "up" or "top"
+    if ($sel eq "dog") { &dog(); }			# Call lower level
+    if ($sel eq "cat") { &cat(); }			# Call lower level
+  }
+}
+
+# Two levels down
+sub dog {
+  while (1) {
+    &menu_init(1,"Lower dog menu");
+    &menu_item("Lab","");
+    &menu_item("Collie","");
+    $sel = &menu_display("");
+    if ($sel eq "%UP%") { return; } # "up" or "top"
+  }
+}
+
+# Two levels down
+sub cat {
+  while (1) {
+    &menu_init(1,"Lower cat menu");
+    &menu_item("Tabby","");
+    &menu_item("Siamese","");
+    $sel = &menu_display("");
+    if ($sel eq "%UP%") { return; } # "up" or "top"
+  }
+}
+
+# One level down - (no lower levels)
+sub mineral {
+  while (1) {
+    &menu_init(1,"Lower mineral menu");
+    &menu_item("Shale","");
+    &menu_item("Limestone","");
+    $sel = &menu_display("");
+    if ($sel eq "%UP%") { return; } # "up" or "top"
+  }
+}
+
+# One level down - (no lower levels)
+sub vegetable {
+  while (1) {
+    &menu_init(1,"Lower vegetable menu");
+    &menu_item("Carrot","");
+    &menu_item("Pea","");
+    $sel = &menu_display("");
+    if ($sel eq "%UP%") { return; } # "up" or "top"
+  }
+}

@@ -1,0 +1,119 @@
+#!/usr/local/bin/perl5
+#**************************************************************************
+# demo_getstr --  Simple perl menu_getstr call demo
+#
+# Notes:   Perl4 - Requires curseperl
+#          Perl5 - Requires William Setzer's "Curses" extension
+#
+#          Demonstrates "menu_getstr" utility routine (useful in perl
+#          curses programs).
+#
+# Author:  Steven L. Kunz
+#          Networked Applications
+#          Iowa State University Computation Center
+#          Ames, IA  50011
+#          Email: skunz@iastate.edu
+#
+# Date:    February 1996
+#**************************************************************************
+
+# Comment these lines for use with Perl4/curseperl
+BEGIN { $Curses::OldCurses = 1; }
+use Curses;
+
+#
+# Load the key package
+#
+require "./menu.pl";
+
+$menu_default_arrow = $menu_default_top = 0;
+
+#
+# NOTE:  This program uses a regular perl menu to activate menu_getstr.  If
+#        you do not use a perl menu prior to calling menu_getstr the first
+#        time you must still call menu_init (only) ONCE before calling
+#        menu_getstr to initialize the curses environment.
+#
+while (1) {
+  &menu_init(1,"PerlMenu 3.3 - menu_getstr Demonstration");
+  &menu_item("(Exit this demo)","exit");
+  &menu_item("Regular (long) strings","regular");
+  &menu_item("Regular (long) strings with default","regdef");
+  &menu_item("Regular (max length 8) strings","max8");
+  &menu_item("Regular (max length 8) strings with default","max8def");
+  &menu_item("Hidden  (max length 8) strings with default","max8inv");
+  $sel = &menu_display("",$menu_default_arrow,$menu_default_top);
+  if ($sel eq "exit") {
+    &endwin();
+    exit(0);
+  }
+  elsif ($sel eq "regular") {
+    &do_getstr("",0,0);		# No default, no max length, non-hidden
+  }
+  elsif ($sel eq "regdef") {
+    &do_getstr("Barney",0,0);	# No default, no max length, non-hidden
+  }
+  elsif ($sel eq "max8") {
+    &do_getstr("",8,0);		# No default, max length 8, non-hidden
+  }
+  elsif ($sel eq "max8def") {
+    &do_getstr("Barney",8,0);   # Default of "Barney", max length 8, non-hidden
+  }
+  elsif ($sel eq "max8inv") {
+    &do_getstr("password",8,1);	# Default of "password", max length 8, hidden
+  }
+}
+
+#**********
+# DO_GETSTR
+#
+# Function: Call menu_getstr with various parameters
+#
+# Input:    - Default string (may be null)
+#           - Maximum length (may be zero)
+#           - No-show (hidden) flag (0=show, 1=noshow)
+#
+# Returns:  Nothing
+#
+#**********
+sub do_getstr {
+  local($default,$maxlen,$hide) = @_;
+  local($title);
+
+# Generate a title indicating what we are doing
+  if ($default) { $title .= "Default=\"$default\" "; }
+  else { $title .= "No-Default "; }
+  if ($maxlen) { $title .= "Maxlen=$maxlen "; }
+  else { $title .= "No-Maxlen "; }
+  if ($hide) { $title .= "Hidden "; }
+  else { $title .= "Visible "; }
+
+# Put out a title and instructions.
+  &clear();
+  &move(0,25);
+  &addstr($title);
+  &move(2,5);
+  &addstr("Enter strings, using left and right arrows to move insert/deletion");
+  &move(3,5);
+  &addstr("point after you have entered some characters.");
+  &move(4,5);
+  &addstr("A null entry exits.");
+
+# Loop, getting/displaying strings until a null value is entered
+  while (1) {
+    if ($maxlen) {
+      $string = &menu_getstr(10,5,"Enter value: ",0,$default,$maxlen,$hide);
+    } else {
+      $string = &menu_getstr(10,5,"Enter value: ",0,$default,0,$hide);
+    }
+    if ($string eq "") { # Exit if we get a null string
+      &clear();
+      &refresh();
+      last;
+    }
+    &move(12,5); # Display last string entered
+    &clrtobot();
+    &addstr("Last string entered: $string");
+    &refresh();
+  }
+}

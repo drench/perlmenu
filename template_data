@@ -1,0 +1,17 @@
+
+                        Template Entry Demonstration
+
+   Address Data Example                    Record # ___
+
+   Name: [_____________________________________________]
+   Addr: [_____________________________________________]
+   City: [__________________]  State: [__]  Zip: [\\\\\] 
+
+   Phone: (\\\) \\\-\\\\            Password: [^^^^^^^^]
+
+   Enter all information available.
+   Edit fields with left/right arrow keys or "delete".
+   Switch fields with "Tab" or up/down arrow keys.
+   Indicate completion by pressing "Return".
+   Refresh screen with "Control-L".
+   Abort this demo here with "Control-X".

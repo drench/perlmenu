@@ -1,0 +1,262 @@
+
+                                   menu.pl
+                                 Perl Menus
+                                 Version 3.3
+                                Release Notes
+                              February 19, 1996
+
+                               Steven L. Kunz
+                           Networked Applications
+                  Iowa State University Computation Center
+                            Iowa State University
+                                 Ames,  Iowa
+
+
+Copyright (C) 1992-96  Iowa State University Computation Center
+                       Ames, Iowa (USA)
+
+
+Changes between menu.pl version 3.3 and version 3.2:
+
+- Added a new call ("menu_load_template_array") to allow loading templates
+  from an array (loaded within your Perl program) in addition to loading
+  it from a file (as with the current "menu_load_template").  This means
+  you can build your template applications as "one file", as opposed to
+  having to distribute template files as companion required pieces.
+  Changes "demo_template" to actually use this feature (with comments 
+  indicating how to use the file method, too).  Thanks to Bjarne Steinsbo
+  for all the patches required to install this feature.
+- Added a new (optional) operand to the "menu_init" call to support help on
+  specific items within a menu.  With an appropriate routine supplied,
+  pressing "?" on a selected item will call the routine with the selection-
+  text and action-text for the items as calling parms, providing a means
+  of providing textual help for the item.  The "demo" sample program
+  is modified to provide help on individual items on the main menu to
+  demonstrate this feature.
+- Added a new call ("menu_help_routine") to allow overridding the default
+  generic help screen (seen by pressing "h") so you can supply your own.
+- Added new operands to the "menu_prefs" call to allow overriding the
+  "Do you really want to quit?" prompt and the default response.
+- Added additional "emacs-similar" field movement control sequences to
+  menu_getstr and menu_display_template.  Control-N and Control-P now
+  move to next and previous fields.  Thanks to Charles F. Randall of
+  the Des Moines Area Community College.
+- Added new return code support to template exit routines to allow aborting
+  data input when using "required fields" support.  Thanks to Christopher
+  Candreva (WestNet Internet Services of Westchester).
+- Updated "demo_template" and "ezreg" programs to reflect new "abort input
+  using required fields" support.
+- Added a "clear_screen" call to "menuutil.pl" utility routines.  The clears
+  the screen and resets the $row and $col variables for you.
+- Added block of commented code to "menu.pl" for systems that do not have
+  "getcap" but do have "terminfo" files and "tput" commands to get terminal
+  sequences (such as SGI and other System V platforms).  Expanded the
+  installation instructions in the README file to better explain the
+  "termcap" vs "terminfo" ramifications on various systems.
+- Improved documentation on use of the "menuutil.pl" utility routines.
+- Changed the demo scripts to favor working "out of the box" on
+  Perl5 instead of Perl4 (package still works with both Perl4 and Perl5).
+- Changed GNU licensing to distribute under the "Library GNU Public License"
+  (or the Artistic License) rather than the regular GPL (as in the past).
+
+Changes between menu.pl version 3.2 and version 3.1:
+
+- Added support for required fields to the "template" facility.  This new
+  support greatly simplifies coding data-entry routines with required fields.
+  New parameters to "menu_display_template" allow automatic insertion of
+  required field markers at one end (or each end) of required fields.
+  New parameter supplied to your "template exit" routine indicates how
+  many required fields remain to be filled in by the user.  The required
+  field markers can be changed via a new "menu_template_prefs" call.
+- Rewrote the "ezreg" demo to take advantage of the new "required field"
+  template support.
+- Added Control-L screen refresh control key for template input.
+- Added "current cursor location latch" to input fields in a template.
+  Now when you tab between fields on a template it returns to the cursor
+  location you left (from within each window) when you return to it.
+- Fixed a bug in the menu subtitle support.  When a subtitle routine was
+  returning "null" (no titles), the titles already in the title array
+  were not cleared.  The first line of the old menu subtitle would not go
+  away.
+
+Changes between menu.pl version 3.1 and version 3.0:
+
+- Added ability to set additional exit-key sequences for templates
+  (via a new "menu_template_setexit" routine).  Thanks to Christopher
+  Candreva (WestNet Internet Services of Westchester).
+- Added ability to specify a routine address (instead of a raw string)
+  for top/bottom subtitles on the "menu_init" call.  The called routine
+  must return the string to be used as the subtitle(s).  Thanks to Christopher
+  Candreva (WestNet Internet Services of Westchester).
+- Added a new "menu_pref" item to disable the "quit" ("Q") hot-key. 
+  Suggested by a couple people - the latest being Karsten Thygesen
+  (Aalborg University, Denmark, Institute for Electronic Systems).
+- Fixed a return-code bug in "menu_load_template" (was not returning zero
+  upon success as advertised).  Thanks to Karsten Thygesen (Aalborg
+  University, Denmark, Institute for Electronic Systems). 
+- Fixed a bug in "menu_getstr" which cleared the default if it was not
+  specified with a "maximum length" value.  Thanks to Karsten Thygesen
+  (Aalborg University, Denmark, Institute for Electronic Systems).
+- Changed demos to not use poor curses programming practices (like using
+  stdio calls such as "print" and "<STDIN>").
+- Added patch for Perl 5.000 and Perl 5.001 compatibility using the Curses
+  extension.  Thanks to William Setzer (author of the Perl5 Curses
+  extension).
+
+Changes between menu.pl version 3.0 and version 2.3:
+
+- Added full-screen data entry support.  New calls of "menu_load_template"
+  and "menu_display_template" are used to load an easy-to-define data entry
+  template.  Alpha-numeric, numeric, hidden fields are supported.  Multiple
+  fields allowed per screen (and per line).  Preliminary work done by
+  Christopher Candreva (WestNet Internet Services of Westchester) provided
+  a base for this development (Chris provided the menu_setexit and
+  menu_getexit code to which I added the template routines).  Alan Cunningham
+  (NASA Spacelink Project) provided most of the design requirements for the
+  exit routine support.
+- Added support for bottom titles (augmenting the existing top "sub-titles").
+  You can now have text above and below the menu.
+- Added a new "menu_paint_file" routine to load top sub-title and bottom
+  titles from a file.  Provides the ability to place large blocks of text
+  associated with a menu in an "off-board" file where it can be easily
+  edited and changed.  This technique is optional - titles can still
+  be loaded in the "menu_init" call.
+- Added a new "menu_prefs" call to allow setting certain global prefs for
+  all menus.  Currently you can indicate that you want all menus centered
+  on the screen (instead of left-justified), and you can indicate you want
+  more "gopher-like" action for the arrow keys.  Thanks (again) to Chris
+  Candreva for the centering code and idea for the arrow-action.
+- Added new optional parm to the "menu_item" call to allow specifying
+  an item as "pre-selected" (changeable or non-changeable).
+- Added lots of optional parameters to menu_getstr to allow default values,
+  maximum lengths, "noshow" values (for passwords), and numeric-only entry.
+  Thanks (again) to Chris Candreva.
+- Added a "menuutil.pl" module with some useful curseperl routines to be
+  used in PerlMenu programs.  Includes a User's Guide.
+- Fixed a bug in the menu page display that caused an extraneous "bump up"
+  of the menu when a down-arrow was pressed on the last page of a multiple
+  page menu (and the last item was on the last line).  Whew!
+- Fixed a bug in the return value from "menu_init".  It previously returned
+  one too few for the number of items currently in the menu.  Thanks to
+  Ian Phillipps.
+- Fixed a bug causing tight loops when the calling process went away (i.e.
+  a terminal user hung up).  If a menu prompt was active the null return
+  value was not detected.  Should also be handled by user signal trapping
+  (within their code) for complete control.
+- Fixed a bug that caused an unnecessary screen repaint when pressing "U"
+  ("up") at the top menu.  Thanks (again) to Chris Candreva.
+- Fixed problems relating to Perl5 (subroutine calls with no parms called as
+  "&rtn;" instead of "&rtn();").  Also added commented code for systems that
+  use "tigetstr" (terminfo data) instead of "getcap" (termcap). Thanks to Jim
+  Sumrall (Intel Corporation) and William Setzer (author of the Curses
+  extension for Perl5). 
+- Made arrow-movement much more CPU efficient.
+- Spiffed up the "ezview" demo to show how multiple file selection in a
+  directory would work.
+- Added an "ezpasswd" demo as an example of full-screen template display
+  of a BSD-style "/etc/passwd" file.
+- Changed "menu_getstr" to default to "overstrike" mode on single character
+  data entry fields.
+- Added "emacs-similar" cursor movement/cut-paste control sequences to
+  menu_getstr and menu_display_template.  Thanks to Charles F. Randall of
+  Iowa State University.
+
+  Compatibility Note:
+  There is ONE old call that has a new required operand.
+  The "menu_curses_application" routine previously had no operands.  With
+  this version, you must pass in the value of the base window you got from the
+  "initscr" call.  So, if you called "menu_curses_application" in the past
+  after you called "initscr" yourself, you should make your code look like:
+
+       $window = &initscr();
+       &menu_curses_application($window);
+
+Changes between menu.pl version 2.3 and version 2.2:
+
+- Fixed a bug in the order of calls to "menu_return_prep" and
+  "menu_exit_routine" when "quit" was being processed.  The "menu_return_prep"
+  routine is now called FIRST, so that it's processing can be done before a
+  possible call to "endwin" in the user's "menu_exit_routine".  This change
+  also means that the processing in "menu_exit_routine" is truly the last code
+  executed prior to exit.  Thanks to Tim Goodwin.
+
+- Fixed a bug in "normal" applications (ones that do not call
+  "menu_curses_application").  The "initscr" routine was previously called
+  on each "menu_init" (in direct violation of the curses documentation).  This
+  caused no obvious problems on some systems (such as DEC ULTRIX) but many
+  problems on others (such as Sun and other System V systems).  Thanks to Steve
+  Mitchell at CSU/Fresno.
+
+Changes between menu.pl version 2.2 and version 2.1:
+
+- Add menu subtitle capability.
+
+Changes between menu.pl version 2.1 and version 2.0:
+
+- Several bugfixes provided by Greg Kresko (National Research Council
+  Canada).  Greg found some problems with "endwin" statement placement (or
+  lack thereof).  Also suggested some minor changes to the demo programs. 
+
+Changes between menu.pl version 2.0 and version 1.4:
+
+- Added multiple selection capability (new "menu_display_mult" call). 
+  Includes new menu options "a" (select "all"), "m" (select based on a string
+  "match") and "c" ("clear" all selections).
+- Added "radio button" selection capability (new "menu_display_radio" call).
+- Removed "f" and "b" ("forward" and "backward") as page movement.  Replaced
+  by existing (but unadvertised) "n" and "p" ("next" and "previous" page).
+- Added "b" and "e" ("begin" and "end") as fast page movement to the items
+  at the beginning and end of a menu.
+- Added "h" to provide a help screen explaining all available menu actions.
+- Changed default menu prompt formats.
+- Added ability to let users spawn off a sub-shell (and get a command
+  prompt) from any menu (using the "!" hot-key) and later continue (upon
+  shell exit).  This feature is normally disabled.
+- Added "menu_getstr" utility routine call (lets you get a string from std
+  input with C-shell-like editing)
+- Documentation changes (new features, some typos)
+
+Changes between menu.pl version 1.4 and version 1.3:
+
+- Added "r=refresh" to bottom menu line (when it fits).
+- A few (minor) documentation changes
+
+Changes between menu.pl version 1.1 and version 1.3:
+
+- Fixed bug in the "numeric direct entry code".  Once a number was entered 
+  it was not cleared if an arrow key was used to move the pointer off the
+  selection.
+- Added the "top menu" feature.  Allows for a "t" ("top") menu hot-key to
+  move to the top (first displayed) menu.
+- Added the "latched" menu feature.  Allows calls to "menu_display" to have
+  two additional parameters that remember the screen/arrow location upon
+  return from the call.  When recalling "menu_display" (with the same
+  parameters) the menu will be restored to the original location/selection.
+
+Changes between menu.pl version .9 (beta) and version 1.1:
+
+- Declaration of "curses_application" fixed ("main`" prepended).
+- Cleanup of "cbreak" and "echo" handling.  Calls to "menu_display"
+  always return with "echo" and "cbreak" set.
+- Return key now functions on systems that do not have termcap entries
+  for either a "newline" or "return" key.
+- "menu_display" will return "%EMPTY%" if no calls to "menu_item" were
+  done between a "menu_init" call and a "menu_display" call.
+- Hitting the "space bar" is now the same as "f" or "n" for forward movement
+  within a multi-page selection menu.
+- The title strings in "menu_init" calls can now begin with a "-" to suppress
+  the "standout" attribute (normally a bold or reverse-video rendition).
+- menu_display will no longer return "%QUIT%" - returns "%UP" instead.  The
+  menu routines process a "q" (for "quit") locally and will exit from
+  there (after the user responds to a "Do you really want to quit?" prompt).
+- Direct number entry for selecting entries "pops" the arrow to the 
+  "best fit" selection on the screen, indicating what selection will be 
+  made when return is hit.
+- The "ezview" demo now displays the correct modification date on its file
+  display.
+
+---
+Steven L. Kunz
+Networked Applications
+Iowa State University Computation Center, Iowa State University, Ames  IA
+INET: skunz@iastate.edu
