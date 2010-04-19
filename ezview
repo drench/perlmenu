@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl5
+#!/usr/bin/env perl
 #***************************************************************************
 # EasyView -- Unix File Viewer/Editor Interface
 #             (a "practical" demo for menu.pl)
@@ -14,6 +14,9 @@
 #
 # Date:    February 1997
 #****************************************************************************
+
+use strict;
+use warnings;
 
 # Perl5+Curses ONLY!
 # Comment these lines for use with Perl4/curseperl
@@ -31,22 +34,26 @@ require "./menuutil.pl";        # For "pause" and "print_nl" routines.
   $SIG{'INT'} = 'cleanup';	# Set signal handler
   $| = 1;			# Flush after every write to stdout
 
-  $last_arrow = 0;		# For arrow latching
-  $last_top = 0;		# For arrow latching
+  our $last_arrow = 0;		# For arrow latching
+  our $last_top = 0;		# For arrow latching
 
 #
 #  MAIN_MENU -- Main (top level) menu
 #
   while (1) {
-    &menu_init(1,"EasyView Version 4.0");
-    &menu_item("Exit","%UP%");
-    &menu_item("List files in current directory","dir_list");
-    &menu_item("Page through text files","page_file");
-    &menu_item("Edit text files","edit_file");
+    menu_init(1,"EasyView Version 4.0");
+    menu_item('Exit' => \&cleanup);
+    menu_item('List files in current directory' => \&dir_list);
+    menu_item('Page through text files' => \&page_file);
+    menu_item('Edit text files' => \&edit_file);
 
-    $subr = &menu_display("",$last_arrow,$last_top);
-    if ($subr eq "%UP%") { &cleanup; }
-    if ($subr ne "") { &$subr; }	# Call subroutine selected
+    my $subr = menu_display(q{}, $last_arrow, $last_top);
+    if (ref($subr) eq 'CODE') {
+        $subr->();
+    }
+    else {
+        # nothing?
+    }
   }
 
 #**********
@@ -64,22 +71,25 @@ sub dir_list { &dir_select(0,".","Directory Contents"); }
 #  Note: Uses file as an unnumbered menu
 #***********
 sub page_file {
-  local($filename,$last_arrow,$last_top);
+#  my($last_arrow,$last_top);
 
 # Call utility function to select file
-  $filename = &dir_select(1,".","Select one or more files to page through");
-  if (($filename eq "%UP%") || ($filename eq "%NONE%")) { return; }
+  my $filename = dir_select(1, '.', 'Select one or more files to page through');
+  if ($filename =~ /^%(?:UP|NONE)%$/) {
+    return;
+  }
 
 # Split up selections, page through each
-  split(/[,]/,$filename);  # Put return in @_
-  foreach (@_) { &menu_pager($_); }
+  for (split /,/, $filename) {
+    menu_pager($_);
+  }
 }
 
 #**********
 #  MENU_PAGER -- A simple pager written in menu routines
 #**********
 sub menu_pager {
-  local($filename) = @_;
+  my($filename) = @_;
 
 # Load file as an unnumbered menu - let menu_display do the paging
 #
@@ -100,6 +110,7 @@ sub menu_pager {
 
 # Expand tabs to blanks
 sub expand {
+  my $off;
   while (($off = index($_[0],"\t")) >= 0) {
     substr($_[0], $off, 1) = ' ' x (8 - $off % 8);
   }
@@ -110,13 +121,16 @@ sub expand {
 #  EDIT_FILE -- Edit a file in the current directory
 #***********
 sub edit_file {
-  &clear;
-  $filename = &dir_select(1,".","Select one or more files to edit");
-  if (($filename eq "%UP%") || ($filename eq "%NONE%")) { return; }
+  clear();
+  my $filename = dir_select(1, '.', 'Select one or more files to edit');
+  if ($filename =~ /^%(?:UP|NONE)%$/) {
+    return;
+  }
 
 # Split up selections, edit each
-  split(/[,]/,$filename);  # Put return in @_
-  foreach (@_) { system("vi $_"); }
+  for(split /,/, $filename) {
+    system('vi', $_);
+  }
 }
 
 #************
@@ -128,31 +142,30 @@ sub edit_file {
 #  Returns:    File name (or "%UP%" or "%NONE%")
 #************
 sub dir_select {
-  local($numbered,$directory,$title) = @_;
-  local($last_arrow,$last_top) = 0;
+  my($numbered,$directory,$title) = @_;
+  my($last_arrow,$last_top) = 0;
   opendir(DIR,$directory);
   &menu_init($numbered,$title);
 dir_entry:
-  while ($filename = readdir(DIR)) {
+  while (my $filename = readdir(DIR)) {
     next dir_entry if ($filename eq "."); 
     next dir_entry if ($filename eq ".."); 
     next if (! -f $filename);
-    ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,$atime,$mtime,$ctime,
+    my($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,$atime,$mtime,$ctime,
      $blksize,$blocks) = stat($filename);
-    ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime($mtime);
+    my($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime($mtime);
     $mon++;
-    $sel_action = $filename;
+    my $sel_action = $filename;
     $filename=$filename.substr("                    ",0,20-length($filename));
-    $sel_text = sprintf("%s%s%02d/%02d/%02d %02d:%02d  %s\n",
-                $filename,$filler,$mon,$mday,$year,$hour,$sec,getpwuid($uid));
+    my $sel_text = sprintf("%s%s%02d/%02d/%02d %02d:%02d  %s\n",
+                $filename,'?',$mon,$mday,$year,$hour,$sec,getpwuid($uid));
     &menu_item($sel_text,$sel_action);
   }
   if ($numbered) {
-    $fn = &menu_display_mult("","");
+    return &menu_display_mult("","");
   } else {
-    $fn = &menu_display("");
+    return &menu_display("");
   }
-  $fn;
 }
 
 #**********

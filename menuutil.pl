@@ -51,6 +51,11 @@
 #
 #****************************************************************************
 
+use strict;
+use warnings;
+
+our($row, $col);
+
 #***********
 #  CLEAR_SCREEN -- Clear screen (and row, col values)
 #
@@ -59,7 +64,7 @@
 #  Notes:	
 #***********
 sub clear_screen {
-  local($do_refresh) = @_;
+  my($do_refresh) = @_;
   &clear();
   $row = $col = 0;
   if ($do_refresh) { &refresh(); }
@@ -76,9 +81,9 @@ sub clear_screen {
 #		in the title).
 #***********
 sub top_title {
-  local($title) = @_;
-  local($title_col) = 0;
-  local($title_standout) = 1;
+  my($title) = @_;
+  my $title_col = 0;
+  my $title_standout = 1;
 
 # Check for title format character.
   if (substr($title,0,1) eq '-') {
@@ -114,7 +119,7 @@ sub top_title {
 #		- New-line count. Optional
 #**********
 sub print_nl {
-  local($text,$skip) = @_;
+  my($text,$skip) = @_;
 
 # Check for end-of-line wrap
   while ($col+length($text) > $COLS) {
@@ -138,7 +143,7 @@ sub print_nl {
 # Arguments:	New-line count
 #**********
 sub new_line {
-  local($skip) = @_;
+  my($skip) = @_;
 
   $row += $skip;
   $col = 0;
@@ -161,9 +166,9 @@ sub new_line {
 #  Returns:	One of the single characters from the "allowed" list.
 #**********
 sub query {
-  local($prompt,$allowed) = @_;
-  local($ch,$sel_prompt);
-  local($nsl,$i) = 0;
+  my($prompt,$allowed) = @_;
+  my($ch,$sel_prompt);
+  my($nsl,$i) = 0;
 
 # Construct "allowed selections" part of the prompt.
   $nsl = length($allowed);
@@ -178,7 +183,7 @@ sub query {
 
 # Prompt until we get a good answer.
   while (1) {
-    &getyx($window,$row,$col);
+    &getyx($perlmenu::window,$row,$col);
     $ch = &menu_getstr($row,$col,"$prompt $sel_prompt ",0); &new_line(1);
     if ($ch ne "") {
       $ch = substr($ch,0,1);
@@ -202,7 +207,7 @@ sub query {
 #  Note:	This routine always skips to a new line first.
 #**********
 sub pause {
-  local($msg) = @_;
+  my($msg) = @_;
 
 # Skip a row and put our message.
   $row += 1; $col=0;
@@ -216,7 +221,7 @@ sub pause {
 
 # Refresh screen and wait for a keypress.
   &refresh();
-  $ch = &getch();
+  return &getch();
 }
 
 #**********
@@ -236,8 +241,8 @@ sub pause {
 #**********
 
 sub popup_ask {
-  local($prompt,$maxlen,$default,$noshow,$numeric) = @_;
-  local($box_row,$box_col,$box_win,$data_win,$val);
+  my($prompt,$maxlen,$default,$noshow,$numeric) = @_;
+  my($box_row,$box_col,$box_win,$data_win,$val);
 
 # Compute some key values
   if (!$maxlen) {
@@ -270,7 +275,7 @@ sub popup_ask {
   &delwin($box_win);
 
 # Clean up the main window and return value
-  &touchwin($window);
+  &touchwin($perlmenu::window);
   &refresh();
 
   $val;
