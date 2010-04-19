@@ -105,12 +105,12 @@ require Exporter;
 # Uncomment these statements if you DON'T have "getcap()" OR
 # if the demo doesn't appear to work (there's a bug in some getcap's).
 #
-#if ($] >= 5.001) {			# Perl5 ONLY!
-#package Perl5::Menu_PL::Compat;	# Don't pollute perlmenu.pm namespace
-#require Term::Cap;			# Get Tgetent package
-#$term = Tgetent Term::Cap { OSPEED => 9600 };	   # Define entry
-#sub perlmenu::getcap { $term->{"_" . shift()} };  # Define local subroutine
-#}
+if ($] >= 5.001) {			# Perl5 ONLY!
+    package Perl5::Menu_PL::Compat;	# Don't pollute perlmenu.pm namespace
+    require Term::Cap;			# Get Tgetent package
+    $term = Tgetent Term::Cap { OSPEED => 9600 };	   # Define entry
+    sub perlmenu::getcap { $term->{"_" . shift()} };  # Define local subroutine
+}
 
 # PERL4 ONLY (GETCAP PROBLEMS)
 # Uncomment these statements if you DON'T have "getcap()" OR
@@ -150,7 +150,7 @@ $menu_sub_titler = "";	# Top Sub-title builder routine
 @menu_bot_title = ();	# Bottom title strings
 $menu_bot_titler = "";	# Bottom title builder routine
 $did_initterm = 0;	# We already got escape sequences for arrows, etc.
-$window = 0;		# Base window
+our $window = 0;		# Base window
 $xrow = $xcol = 0;
 $first_line = $last_line = $item_lines_per_screen = 0;
 $items_per_screen = $items_per_line = 0;
