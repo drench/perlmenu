@@ -1,3 +1,4 @@
+# vim: se ts=2 expandtab :
 #****************************************************************************
 # perlmenu.pm -- Perl Menu Support Facility 
 #
@@ -232,7 +233,7 @@ sub menu_curses_application {
   $curses_application = 1;
 
 # Sanity check.  If no window, get one.
-  if (!$window) { $window = &initscr(); }
+  if (!$window) { $window = &initscr(); start_color(); }
 
   $window;
 }
@@ -641,8 +642,13 @@ sub menu_item {
   if (!$item_text) { return($menu_index); }
   if (!$item_set) { $item_set = 0; }
 
+  if (UNIVERSAL::isa($item_text, 'HASH')) {
+    bless $item_text, 'perlmenu::label';
+    start_color();
+  }
+
 # Adjust max length value (for centering menu)
-  $_ = length($item_text);
+  $_ = length("$item_text");
   if ($_ > $max_item_len) { $max_item_len = $_; }
 
 # Load into arrays and adjust index
@@ -689,7 +695,7 @@ sub menu_display {
 
   &clear(); $xrow = $xcol = 0;
   $last_menu_top_item = -1;	# Force drawing of menu items
-  $ret = &menu_display_internal(0,$menu_prompt,0);
+  $ret = menu_display_internal(0, $menu_prompt, 0);
   if ($#_ > 0) { $_[1] = $arrow_spec_row; }
   if ($#_ > 1) { $_[2] = $menu_top_item; }
   if ($#_ > 2) { $_[3] = $arrow_spec_col; }
@@ -736,7 +742,7 @@ sub menu_display_radio {
 
 # Insert our top selection item (and adjust max length value)
   if ($done_text eq "") { $done_text = "(Accept this setting)"; }
-  $_ = length($done_text);
+  $_ = length("$done_text");
   if ($_ > $max_item_len) { $max_item_len = $_; }
   unshift(@menu_sel_text,$done_text);
   unshift(@menu_sel_action,"%DONE%");
@@ -794,7 +800,7 @@ sub menu_display_mult {
 
 # Insert our top selection item (and adjust max length value)
   if ($done_text eq "") { $done_text = "(Done with selections)"; }
-  $_ = length($done_text);
+  $_ = length("$done_text");
   if ($_ > $max_item_len) { $max_item_len = $_; }
   unshift(@menu_sel_text,$done_text);
   unshift(@menu_sel_action,"%DONE%");
@@ -1321,7 +1327,7 @@ sub menu_display_internal {
 	    $i = 1;  
 	    while ($i < $menu_index) {
 	      if ($selected_action[$i] >= 0) {
-	        $low_sel = $menu_sel_text[$i];
+	        $low_sel = "$menu_sel_text[$i]";
 	        $low_sel =~ tr/A-Z/a-z/;
 	        if (index($low_sel,$search) >=0) { $selected_action[$i] = 1; }
 	      }
@@ -1389,7 +1395,7 @@ sub menu_display_internal {
 	    $number = 0;
 	  }
 	  else {
-	    &$menu_item_help_routine($menu_sel_text[$item],$menu_sel_action[$item]);
+	    &$menu_item_help_routine("$menu_sel_text[$item]",$menu_sel_action[$item]);
 	    &clear(); &refresh();
 	  }
 	} else {
@@ -1485,17 +1491,22 @@ sub menu_display_internal {
 
 # Reset last selection to normal rendition or clear last arrow
       if ($highlight) {
-	$item = $menu_top_item+($last_arrow_line-$first_line)*$items_per_line+$last_arrow_col;
-	$i = $left_margin+$prepend_len+$last_arrow_col*($column_width);
-	if ($menu_type && !$item) { $i -= 4; } # No "[X] " on first item
-	&move($last_arrow_line,$i);
-	&addstr($menu_sel_text[$item]);
-	&move($last_arrow_line,$i);
-      } else {
-	if ($menu_numbered) {
-	  &move($last_arrow_line,$left_margin+$last_arrow_col*($column_width));
-	  &addstr("  ");
-	}
+        $item = $menu_top_item + ($last_arrow_line - $first_line) *
+                $items_per_line + $last_arrow_col;
+        $i = $left_margin + $prepend_len + $last_arrow_col * ($column_width);
+        if ($menu_type && !$item) {
+          $i -= 4; # No "[X] " on first item
+        }
+        move($last_arrow_line, $i);
+
+        addstr("$menu_sel_text[$item]"); # double quote to force stringify!
+        move($last_arrow_line, $i);
+      }
+      else {
+        if ($menu_numbered) {
+          move($last_arrow_line,$left_margin+$last_arrow_col*($column_width));
+          addstr('  ');
+        }
       }
     }
   }
@@ -1640,8 +1651,12 @@ sub menu_page {
     # Update percentage on bottom line
     &move($main'LINES-1,0);
     &standout();
-    if ($menu_single_page) { &addstr("(All) "); }
-    else { &addstr(sprintf("\(%3d%%\)",$percent)); }
+    if ($menu_single_page) {
+      addstr('(All) ');
+    }
+    else {
+      addstr(sprintf("\(%3d%%\)",$percent));
+    }
     &standend();
  
     # Display current page of menu
@@ -1657,39 +1672,71 @@ sub menu_page {
       $line = "";
 
       if ($item < $total_items) { # If any items left to show ...
-	$curr_col = 1;
+        $curr_col = 1;
         while ($curr_col <= $items_per_line) { # Add items to line
-	  if ($item < $total_items) {
-	    if ($menu_numbered) { $line .= &menu_add_number($item + 1); }
-	    if ($menu_type) { # Add selection boxes on mult/radio
-	      if ($item != 0) {
-	        if ($menu_type == 1) {
-		  if ($menu_sel_action[$item] eq $radio_sel) { $line .= "[X] "; }
-		  else { $line .= "[ ] "; }
-		} else { # menu_type is 2
-		  if ($selected_action[$item] > 0) { $line .= "[X] "; }
-		  elsif ($selected_action[$item] < 0) { $line .= "[-] "; }
-		  else { $line .= "[ ] "; }
-		}
-	      }
-	    }
-	    $line .= $menu_sel_text[$item]; # Add the selection text
-	    if ($items_per_line > 1) { # Pad out if multiple columns
-	      $i = 1; # Always pad one
-	      if ($menu_type && !$item) { $i += 4; } # Missing "[ ] "
-	      $line .= ' ' x ($max_item_len-length($menu_sel_text[$item])+$i);
-	    }
-	    $max_sel_col = $curr_col - 1;
-	    $item++;
-	  }
-	  $curr_col++;
-	}
+          if ($item < $total_items) {
+            if ($menu_numbered) {
+              $line .= &menu_add_number($item + 1);
+            }
+            if ($menu_type) { # Add selection boxes on mult/radio
+              if ($item != 0) {
+                if ($menu_type == 1) {
+                  if ($menu_sel_action[$item] eq $radio_sel) {
+                    $line .= '[X] ';
+                  }
+                  else {
+                    $line .= '[ ] ';
+                  }
+                }
+                else { # menu_type is 2
+                  if ($selected_action[$item] > 0) {
+                    $line .= '[X] ';
+                  }
+                  elsif ($selected_action[$item] < 0) {
+                    $line .= '[-] ';
+                  }
+                  else {
+                    $line .= '[ ] ';
+                  }
+                }
+              }
+            }
 
-	if (length($line) > $main'COLS - 1) { # Truncate lines that would wrap
-	  $line = substr($line,0,$main'COLS - 1);
-	}
-	&addstr($line);
-	$max_sel_line = $curr_line;
+            $line .= "$menu_sel_text[$item]"; # Add the selection text
+
+            if ($items_per_line > 1) { # Pad out if multiple columns
+              $i = 1; # Always pad one
+              if ($menu_type && !$item) {
+                $i += 4; # Missing "[ ] "
+              }
+              $line .= ' ' x ($max_item_len-length("$menu_sel_text[$item]")+$i);
+            }
+            $max_sel_col = $curr_col - 1;
+            $item++;
+          }
+          $curr_col++;
+        }
+
+        if (length($line) > $main'COLS - 1) { # Truncate lines that would wrap
+          $line = substr($line,0,$main'COLS - 1);
+        }
+
+        my $label = $menu_sel_text[$item - 1]; # KLUGE; $item got incremented above
+
+        attrset(COLOR_PAIR(0));
+        if (eval { $label->isa('perlmenu::label') }) {
+          my $preline = substr($line, 0, -(length $label->{text}));
+          addstr($preline);
+          my $n = create_color_pair($label->{fg}, $label->{bg});
+          attrset(COLOR_PAIR($n));
+          addstr($label->{text});
+        }
+        else {
+          addstr($line);
+        }
+
+        attrset(COLOR_PAIR(0));
+        $max_sel_line = $curr_line;
       }
       $curr_line++;
     }
@@ -1702,29 +1749,44 @@ sub menu_page {
     while ($curr_line <= $last_line) {
       $i = $left_margin + $prepend_len - 3; # First "X" on line
       if ($item < $total_items) {
-	for ($j = 0; $j < $items_per_line; $j++) {
-	  if ($item) {
-	    &move($curr_line,$i);
-	    if ($menu_type == 1) {
-	      if ($menu_sel_action[$item] eq $radio_sel) { &addstr("X"); }
-	      else { &addstr(" "); }
-	    } else { # menu_type is 2
-	      if ($selected_action[$item] > 0) { &addstr("X"); }
-	      elsif ($selected_action[$item] < 0) { &addstr("-"); }
-	      else { &addstr(" "); }
-	    }
-	  }
-	  $i += $column_width;	# Next "X" on line
-	  $item++;		# Next item
-	}
+        for ($j = 0; $j < $items_per_line; $j++) {
+          if ($item) {
+            &move($curr_line,$i);
+            if ($menu_type == 1) {
+              if ($menu_sel_action[$item] eq $radio_sel) {
+                addstr('X');
+              }
+              else {
+                addstr(' ');
+              }
+            }
+            else { # menu_type is 2
+              if ($selected_action[$item] > 0) {
+                addstr('X');
+              }
+              elsif ($selected_action[$item] < 0) {
+                addstr('-');
+              }
+              else {
+                addstr(' ');
+              }
+            }
+          }
+          $i += $column_width; # Next "X" on line
+          $item++; # Next item
+        }
       }
-      $curr_line++;		# Next line
+      $curr_line++; # Next line
     }
   }
  
 # Sanity checks for arrow
-  if ($arrow_line < $first_line) { $arrow_line = $first_line; }
-  if ($arrow_line > $max_sel_line) { $arrow_line = $max_sel_line; }
+  if ($arrow_line < $first_line) {
+    $arrow_line = $first_line;
+  }
+  if ($arrow_line > $max_sel_line) {
+    $arrow_line = $max_sel_line;
+  }
 
 # Highlight selection text or add selection arrow (based on prefs).
 # Position the cursor properly on the screen.
@@ -1734,12 +1796,15 @@ sub menu_page {
     if ($menu_type && $item == 0) { $i -= 4; } # No "[X] " on first item
     &move($arrow_line,$i);
     &standout();
-    &addstr($menu_sel_text[$item]);
+    addstr("$menu_sel_text[$item]"); # double quote to force stringify
     &standend();
     &move($arrow_line,$i);
-  } else {
-    &move($arrow_line,$left_margin+$arrow_col*$column_width);
-    if ($menu_numbered) { &addstr("->"); }
+  }
+  else {
+    move($arrow_line, $left_margin + $arrow_col * $column_width);
+    if ($menu_numbered) {
+      addstr('->');
+    }
   }
 
 # Write out current menu page
@@ -2365,5 +2430,44 @@ sub mark_req_fields {
   }
   return($rc);
 }
+
+my %color_pair_index;
+my @color_pairs;
+
+sub perlmenu_init_pair {
+    my($n, $fg, $bg) = @_;
+    $color_pairs[$n] = [$fg, $bg];
+    $color_pair_index{"$fg.$bg"} = $n;
+    init_pair($n, $fg, $bg);
+}
+
+sub create_color_pair {
+    my($fg, $bg) = @_;
+
+    my $n = $color_pair_index{"$fg.$bg"};
+    if (defined $n) {
+        return $n;
+    }
+
+    my $i = 1;
+    while ($i < 256) {
+        next if $color_pairs[$i];
+        perlmenu_init_pair($i, $fg, $bg);
+        return $i;
+    }
+    continue {
+        ++$i;
+    }
+
+    die 'Unable to create color pair';
+}
+
+package perlmenu::label;
+
+use strict;
+use integer;
+use warnings;
+
+use overload '""' => sub { my $self = shift; return $self->{text} };
 
 1;
