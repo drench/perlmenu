@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl5
+#!/usr/bin/env perl
 #***************************************************************************
 # EasyReg -- PerlMenu Full-screen Registration Demo
 #            (a "practical" demo for menu.pl)

@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl5
+#!/usr/bin/env perl
 #***************************************************************************
 # EasyView -- Unix File Viewer/Editor Interface
 #             (a "practical" demo for menu.pl)

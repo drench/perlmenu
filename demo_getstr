@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl5
+#!/usr/bin/env perl
 #**************************************************************************
 # demo_getstr --  Simple perl menu_getstr call demo
 #
