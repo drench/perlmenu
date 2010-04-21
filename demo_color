@@ -79,9 +79,28 @@ my $title_cnt = 0;		# To trigger different subtitles/bottom titles
     &menu_item("See a radio-button menu demo",\&test_radio_menu);
     &menu_item("See a multiple-selection menu demo",\&test_mult_menu);
     &menu_item("See a menu demo with sub-titles",\&test_subtitle_menu);
-    &menu_item("Change arrow-wrap/scrolling menu preferences",\&gopher_prefs);
-    &menu_item("Change multiple-column menu preferences",\&mult_col_prefs);
-    &menu_item("Change arrow/highlight selection line menu preferences",\&arrow_prefs);
+    menu_item(
+        {
+            attr => A_BLINK,
+            fg   => COLOR_WHITE,
+            bg   => COLOR_CYAN,
+            text => 'Change arrow-wrap/scrolling menu preferences',
+        }, \&gopher_prefs
+    );
+    menu_item(
+        {
+            attr => (A_BLINK | A_UNDERLINE),
+            fg   => COLOR_GREEN,
+            bg   => COLOR_BLACK,
+            text => 'Change multiple-column menu preferences',
+        }, \&mult_col_prefs
+    );
+    menu_item(
+        {
+            attr => A_BLINK,
+            text => 'Change arrow/highlight selection line menu preferences',
+        }, \&arrow_prefs
+    );
     &menu_item("Change numbering on all menus",\&numbered_prefs);
 
     my $sel = menu_display(q{},$menu_default_row,$menu_default_top,$menu_default_col);
