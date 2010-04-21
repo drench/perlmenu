@@ -1727,9 +1727,17 @@ sub menu_page {
         if (eval { $label->isa('perlmenu::label') }) {
           my $preline = substr($line, 0, -(length $label->{text}));
           addstr($preline);
-          my $n = create_color_pair($label->{fg}, $label->{bg});
-          attrset(COLOR_PAIR($n));
+
+          my $attr = $label->{attr} || 0;
+
+          if (defined($label->{fg}) && defined($label->{bg})) {
+            my $n = create_color_pair($label->{fg}, $label->{bg});
+            $attr = $attr | COLOR_PAIR($n);
+          }
+
+          attron($attr) if $attr;
           addstr($label->{text});
+          attroff($attr) if $attr;
         }
         else {
           addstr($line);
